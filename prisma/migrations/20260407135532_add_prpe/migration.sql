@@ -1,0 +1,27 @@
+-- CreateTable
+CREATE TABLE "prpe_cases" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "learner_profile_id" TEXT NOT NULL,
+    "created_by_id" TEXT,
+    "case_type" TEXT NOT NULL DEFAULT 'A',
+    "status" TEXT NOT NULL DEFAULT 'DRAFT',
+    "start_date" DATETIME NOT NULL,
+    "end_date" DATETIME,
+    "trigger_absence_days" INTEGER NOT NULL DEFAULT 0,
+    "trigger_notes" TEXT,
+    "step0_prepared_at" DATETIME,
+    "step0_notes" TEXT,
+    "step1_mail_sent_at" DATETIME,
+    "step2_meeting_at" DATETIME,
+    "step2_cr_notes" TEXT,
+    "engagement_signed" BOOLEAN NOT NULL DEFAULT false,
+    "step3_relance_sent_at" DATETIME,
+    "step4_tracking_notes" TEXT,
+    "decision_at" DATETIME,
+    "outcome" TEXT,
+    "outcome_notes" TEXT,
+    "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" DATETIME NOT NULL,
+    CONSTRAINT "prpe_cases_learner_profile_id_fkey" FOREIGN KEY ("learner_profile_id") REFERENCES "learner_profiles" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "prpe_cases_created_by_id_fkey" FOREIGN KEY ("created_by_id") REFERENCES "users" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+);

@@ -1,0 +1,868 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS (SQLite doesn't support enums, using String fields)
+// Values documented in comments
+// ============================================================
+
+// Role: SUPER_ADMIN | ADMIN_CAMPUS | PROJECT_MANAGER | TRAINER | LEARNER
+// ProjectType: OWN | FUNDED | PARTNERSHIP
+// ProjectStatus: DRAFT | ACTIVE | COMPLETED | ARCHIVED
+// CandidateStage: NEW | CONTACTED | EVALUATED | QUALIFIED | REJECTED | CONVERTED
+// LearnerStatus: IN_TRAINING | DROPPED | INSERTED | EXCLUDED
+// InsertionType: INTERNSHIP | CDI | CDD | FREELANCE | FURTHER_STUDIES
+// AttendanceHalfDay: AM | PM
+// AttendanceStatus: PRESENT | ABSENT | JUSTIFIED_ABSENT | LATE
+// JustificationStatus: PENDING | APPROVED | REJECTED
+// CalendarScopeType: CAMPUS | PROGRAM | COHORT
+// CalendarExceptionType: HOLIDAY | VACATION | CANCELLED | SPECIAL
+// WeeklyPlanStatus: DRAFT | PUBLISHED
+// ActivityType: VEILLE | LIVE_CODING | PROBLEM_SOLVING | CODE_REVIEW | DEBRIEFING | OTHER
+// Modality: IN_PERSON | REMOTE | HYBRID | ASYNC
+// AssignmentTarget: ALL_LEARNERS | GROUP | INDIVIDUAL
+// GradingMode: NONE | PASS_FAIL | SCORE
+// EvalStatus: NOT_STARTED | DONE | REVIEWED
+// PlanStatus: DRAFT | ACTIVE | COMPLETED | ARCHIVED
+// PhaseType: COMMUNICATION | SOURCING | SELECTION | WARMUP | TRAINING | WORKSHOP | FIL_ROUGE | EVALUATION | CERTIFICATION | RATTRAPAGE | INSERTION | OTHER
+// PhaseStatus: PLANNED | IN_PROGRESS | DONE | CANCELLED
+// ItemType: ACTIVITY | WORKSHOP | MILESTONE | EVENT | REVIEW_POINT | DEADLINE
+// ItemStatus: PLANNED | IN_PROGRESS | DONE | CANCELLED | POSTPONED
+// Priority: LOW | MEDIUM | HIGH | CRITICAL
+// DependencyType: FINISH_TO_START | START_TO_START | FINISH_TO_FINISH
+// DocumentType: CIN | CV | CONTRACT | DIPLOMA | JUSTIFICATIF | OTHER
+// SourcingRecommendation: QUALIFIED | REJECTED | WAITLIST
+// PartnerType: FUNDER | PARTNER | INSTITUTION | OTHER
+
+// ============================================================
+// CORE ENTITIES
+// ============================================================
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  firstName    String   @map("first_name")
+  lastName     String   @map("last_name")
+  role         String   @default("LEARNER") // Role enum
+  campusId     String?  @map("campus_id")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  lastLogin    DateTime? @map("last_login")
+
+  campus       Campus?  @relation(fields: [campusId], references: [id])
+
+  // Relations
+  trainerCohorts          Cohort[]                    @relation("TrainerCohorts")
+  learnerProfile          LearnerProfile?
+  sourcingEvaluations     SourcingEvaluation[]        @relation("Evaluator")
+  statusChanges           LearnerStatusHistory[]      @relation("ChangedBy")
+  uploadedDocuments       Document[]                  @relation("UploadedBy")
+  createdCalendars        TrainingCalendar[]          @relation("CalendarCreator")
+  createdSessions         AttendanceSession[]         @relation("SessionCreator")
+  recordedAttendance      AttendanceRecord[]          @relation("RecordedBy")
+  reviewedJustifications  AbsenceJustificationRequest[] @relation("ReviewedBy")
+  createdWeeklyPlans      WeeklyPlan[]                @relation("PlanCreator")
+  evaluatedActivities     ActivityEvaluation[]        @relation("EvaluatedBy")
+  ownedPhases             TimelinePhase[]             @relation("PhaseOwner")
+  responsibleItems        TimelineItem[]              @relation("ItemResponsible")
+  timelineComments        TimelineComment[]
+  createdProjectPlans     ProjectPlan[]               @relation("PlanCreatedBy")
+  sprintEvaluationsGiven  SprintEvaluation[]          @relation("SprintEvaluator")
+  filRougeValidations     FilRougeSubmission[]         @relation("FilRougeValidator")
+  organizedMeetings       LearnerMeeting[]             @relation("MeetingOrganizer")
+  prpeCasesCreated        PRPECase[]                   @relation("PRPECreator")
+
+  @@map("users")
+}
+
+model Partner {
+  id           String   @id @default(cuid())
+  name         String
+  type         String   @default("OTHER") // PartnerType enum
+  contactName  String?  @map("contact_name")
+  contactEmail String?  @map("contact_email")
+  contactPhone String?  @map("contact_phone")
+  notes        String?
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  projects     Project[]
+
+  @@map("partners")
+}
+
+model Project {
+  id             String   @id @default(cuid())
+  name           String
+  code           String   @unique
+  description    String?
+  projectType    String   @default("OWN") @map("project_type") // ProjectType enum
+  partnerId      String?  @map("partner_id")
+  fundingSource  String?  @map("funding_source")
+  startDate      DateTime? @map("start_date")
+  endDate        DateTime? @map("end_date")
+  targetCapacity Int?     @map("target_capacity")
+  status         String   @default("DRAFT") // ProjectStatus enum
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  partner        Partner? @relation(fields: [partnerId], references: [id])
+
+  programs       Program[]
+  cohorts        Cohort[]
+  candidates     Candidate[]
+  projectPlans   ProjectPlan[]
+
+  @@map("projects")
+}
+
+model Campus {
+  id       String   @id @default(cuid())
+  name     String   @unique
+  city     String
+  isActive Boolean  @default(true) @map("is_active")
+
+  users      User[]
+  programs   Program[]
+  candidates Candidate[]
+  calendars  TrainingCalendar[] @relation("CampusCalendars")
+  phases     TimelinePhase[]    @relation("PhaseCampus")
+
+  @@map("campuses")
+}
+
+model Program {
+  id          String   @id @default(cuid())
+  campusId    String   @map("campus_id")
+  projectId   String?  @map("project_id")
+  name        String
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+
+  campus      Campus   @relation(fields: [campusId], references: [id])
+  project     Project? @relation(fields: [projectId], references: [id])
+
+  cohorts     Cohort[]
+
+  @@map("programs")
+}
+
+model Cohort {
+  id         String    @id @default(cuid())
+  programId  String    @map("program_id")
+  projectId  String?   @map("project_id")
+  name       String
+  startDate  DateTime? @map("start_date")
+  endDate    DateTime? @map("end_date")
+  trainerId  String?   @map("trainer_id")
+  capacity   Int?
+  isActive   Boolean   @default(true) @map("is_active")
+
+  program    Program   @relation(fields: [programId], references: [id])
+  project    Project?  @relation(fields: [projectId], references: [id])
+  trainer    User?     @relation("TrainerCohorts", fields: [trainerId], references: [id])
+
+  learnerProfiles         LearnerProfile[]
+  attendanceSessions      AttendanceSession[]
+  justificationRequests   AbsenceJustificationRequest[]
+  weeklyPlans             WeeklyPlan[]
+  phases                  TimelinePhase[]    @relation("PhaseCohort")
+  relatedTimelineItems    TimelineItem[]     @relation("ItemCohort")
+  filRougeProject         FilRougeProject?
+  juryBlancSessions       JuryBlancSession[]
+
+  @@map("cohorts")
+}
+
+// ============================================================
+// CANDIDATES & SOURCING
+// ============================================================
+
+model Candidate {
+  id             String   @id @default(cuid())
+  firstName      String   @map("first_name")
+  lastName       String   @map("last_name")
+  email          String
+  phone          String?
+  cin            String?
+  birthdate      DateTime?
+  gender         String?  // MALE | FEMALE
+  academicLevel  String?  @map("academic_level") // Bac | Bac+2 | Bac+3 | Bac+5
+  academicField  String?  @map("academic_field")
+  motivation     String?
+  campusId       String?  @map("campus_id")
+  projectId      String?  @map("project_id")
+  sourceChannel  String?  @map("source_channel")
+  currentStage   String   @default("NEW") @map("current_stage") // CandidateStage enum
+  notes          String?
+  contactHistory String?  @map("contact_history") // JSON array of {date, channel, note, userId}
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  campus         Campus?  @relation(fields: [campusId], references: [id])
+  project        Project? @relation(fields: [projectId], references: [id])
+
+  evaluations    SourcingEvaluation[]
+  learnerProfile LearnerProfile?
+
+  @@map("candidates")
+}
+
+
+model SourcingEvaluation {
+  id              String   @id @default(cuid())
+  candidateId     String   @map("candidate_id")
+  evaluatorId     String   @map("evaluator_id")
+  evaluationDate  DateTime @map("evaluation_date")
+  criteriaJson    String?  @map("criteria_json")
+  score           Float?
+  recommendation  String?  // SourcingRecommendation enum
+  comment         String?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  candidate       Candidate @relation(fields: [candidateId], references: [id])
+  evaluator       User      @relation("Evaluator", fields: [evaluatorId], references: [id])
+
+  @@map("sourcing_evaluations")
+}
+
+// ============================================================
+// LEARNERS & DOCUMENTS
+// ============================================================
+
+model LearnerProfile {
+  id               String   @id @default(cuid())
+  userId           String?  @unique @map("user_id")
+  candidateId      String?  @unique @map("candidate_id")
+  cohortId         String   @map("cohort_id")
+  firstName        String   @map("first_name")
+  lastName         String   @map("last_name")
+  email            String
+  phone            String?
+  cin              String?
+  birthdate        DateTime?
+  emergencyContact String?  @map("emergency_contact")
+  gender           String?  // MALE | FEMALE
+  academicLevel    String?  @map("academic_level") // Bac | Bac+2 | Bac+3 | Bac+5
+  academicField    String?  @map("academic_field")  // Informatique | Économie et Gestion | etc.
+  statusCurrent    String   @default("IN_TRAINING") @map("status_current") // LearnerStatus
+  insertionType    String?  @map("insertion_type") // InsertionType: CDI | CDD | FREELANCE | INTERNSHIP | PRE_HIRE | FURTHER_STUDIES | ACTIVE_SEARCH
+  insertionCompany String?  @map("insertion_company")
+  insertionDate    DateTime? @map("insertion_date")
+  insertionProof   String?  @map("insertion_proof")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  user             User?      @relation(fields: [userId], references: [id])
+  candidate        Candidate? @relation(fields: [candidateId], references: [id])
+  cohort           Cohort     @relation(fields: [cohortId], references: [id])
+
+  documents            Document[]
+  statusHistory        LearnerStatusHistory[]
+  attendanceRecords    AttendanceRecord[]
+  justificationRequests AbsenceJustificationRequest[]
+  activityAssignments  ActivityAssignment[] @relation("AssignmentLearner")
+  activityEvaluations  ActivityEvaluation[]
+  sprintEvaluations    SprintEvaluation[]
+  filRougeSubmissions  FilRougeSubmission[]
+  juryBlancEvals       JuryBlancEvaluation[]
+  juryBlancRecords     JuryBlancLearnerRecord[]
+  meetings             LearnerMeeting[]
+  prpeCases            PRPECase[]
+
+  @@map("learner_profiles")
+}
+
+model LearnerStatusHistory {
+  id              String   @id @default(cuid())
+  learnerProfileId String  @map("learner_profile_id")
+  fromStatus      String?  @map("from_status")
+  toStatus        String   @map("to_status")
+  effectiveDate   DateTime @map("effective_date")
+  comment         String?
+  changedById     String   @map("changed_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  learnerProfile  LearnerProfile @relation(fields: [learnerProfileId], references: [id])
+  changedBy       User           @relation("ChangedBy", fields: [changedById], references: [id])
+
+  @@map("learner_status_history")
+}
+
+model Document {
+  id              String   @id @default(cuid())
+  learnerProfileId String  @map("learner_profile_id")
+  type            String   // DocumentType enum
+  filename        String
+  filePath        String   @map("file_path")
+  uploadedById    String   @map("uploaded_by")
+  uploadedAt      DateTime @default(now()) @map("uploaded_at")
+  visibility      String   @default("STAFF") // STAFF | ALL
+
+  learnerProfile  LearnerProfile @relation(fields: [learnerProfileId], references: [id])
+  uploadedBy      User           @relation("UploadedBy", fields: [uploadedById], references: [id])
+
+  @@map("documents")
+}
+
+// ============================================================
+// CALENDARS & ATTENDANCE
+// ============================================================
+
+model TrainingCalendar {
+  id             String   @id @default(cuid())
+  scopeType      String   @map("scope_type") // CalendarScopeType
+  scopeId        String   @map("scope_id")
+  timezone       String   @default("Africa/Casablanca")
+  defaultWeekdays String  @default("1,2,3,4,5") @map("default_weekdays") // comma-separated: 1=Mon...5=Fri
+  createdById    String   @map("created_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  createdBy      User     @relation("CalendarCreator", fields: [createdById], references: [id])
+  campus         Campus?  @relation("CampusCalendars", fields: [scopeId], references: [id])
+  exceptions     CalendarException[]
+
+  @@map("training_calendars")
+}
+
+model CalendarException {
+  id         String   @id @default(cuid())
+  calendarId String   @map("calendar_id")
+  date       DateTime
+  type       String   // CalendarExceptionType
+  label      String?
+  note       String?
+
+  calendar   TrainingCalendar @relation(fields: [calendarId], references: [id])
+
+  @@map("calendar_exceptions")
+}
+
+model AttendanceSession {
+  id         String   @id @default(cuid())
+  cohortId   String   @map("cohort_id")
+  date       DateTime
+  halfDay    String   @map("half_day") // AM | PM
+  createdById String  @map("created_by")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  cohort     Cohort   @relation(fields: [cohortId], references: [id])
+  createdBy  User     @relation("SessionCreator", fields: [createdById], references: [id])
+  records    AttendanceRecord[]
+
+  @@unique([cohortId, date, halfDay])
+  @@map("attendance_sessions")
+}
+
+model AttendanceRecord {
+  id                  String   @id @default(cuid())
+  attendanceSessionId String   @map("attendance_session_id")
+  learnerProfileId    String   @map("learner_profile_id")
+  status              String   // AttendanceStatus
+  lateMinutes         Int?     @map("late_minutes")
+  note                String?
+  recordedById        String   @map("recorded_by")
+  recordedAt          DateTime @default(now()) @map("recorded_at")
+
+  session             AttendanceSession @relation(fields: [attendanceSessionId], references: [id])
+  learnerProfile      LearnerProfile    @relation(fields: [learnerProfileId], references: [id])
+  recordedBy          User              @relation("RecordedBy", fields: [recordedById], references: [id])
+
+  @@unique([attendanceSessionId, learnerProfileId])
+  @@map("attendance_records")
+}
+
+// ============================================================
+// JUSTIFICATION REQUESTS
+// ============================================================
+
+model AbsenceJustificationRequest {
+  id              String   @id @default(cuid())
+  learnerProfileId String  @map("learner_profile_id")
+  cohortId        String   @map("cohort_id")
+  dateFrom        DateTime @map("date_from")
+  halfDayFrom     String   @map("half_day_from") // AM | PM
+  dateTo          DateTime @map("date_to")
+  halfDayTo       String   @map("half_day_to") // AM | PM
+  reasonType      String   @map("reason_type")
+  description     String?
+  status          String   @default("PENDING") // JustificationStatus
+  submittedAt     DateTime @default(now()) @map("submitted_at")
+  reviewedById    String?  @map("reviewed_by")
+  reviewedAt      DateTime? @map("reviewed_at")
+  reviewComment   String?  @map("review_comment")
+
+  learnerProfile  LearnerProfile @relation(fields: [learnerProfileId], references: [id])
+  cohort          Cohort         @relation(fields: [cohortId], references: [id])
+  reviewedBy      User?          @relation("ReviewedBy", fields: [reviewedById], references: [id])
+  attachments     JustificationAttachment[]
+
+  @@map("absence_justification_requests")
+}
+
+model JustificationAttachment {
+  id                    String   @id @default(cuid())
+  justificationRequestId String  @map("justification_request_id")
+  filePath              String   @map("file_path")
+  filename              String
+  mimeType              String?  @map("mime_type")
+  size                  Int?
+  uploadedAt            DateTime @default(now()) @map("uploaded_at")
+
+  justificationRequest  AbsenceJustificationRequest @relation(fields: [justificationRequestId], references: [id])
+
+  @@map("justification_attachments")
+}
+
+// ============================================================
+// ACTIVITIES & WEEKLY PLANS
+// ============================================================
+
+model WeeklyPlan {
+  id            String   @id @default(cuid())
+  cohortId      String   @map("cohort_id")
+  weekStartDate DateTime @map("week_start_date")
+  createdById   String   @map("created_by")
+  createdAt     DateTime @default(now()) @map("created_at")
+  status        String   @default("DRAFT") // WeeklyPlanStatus
+
+  cohort        Cohort   @relation(fields: [cohortId], references: [id])
+  createdBy     User     @relation("PlanCreator", fields: [createdById], references: [id])
+  activities    PlannedActivity[]
+  relatedTimelineItems TimelineItem[] @relation("ItemWeeklyPlan")
+
+  @@map("weekly_plans")
+}
+
+model PlannedActivity {
+  id             String   @id @default(cuid())
+  weeklyPlanId   String   @map("weekly_plan_id")
+  date           DateTime
+  halfDay        String?  @map("half_day") // AM | PM
+  activityType   String   @map("activity_type") // ActivityType
+  title          String
+  description    String?
+  modality       String?  // Modality
+  durationMinutes Int?    @map("duration_minutes")
+  resourcesLinks String?  @map("resources_links")
+  expectedOutcome String? @map("expected_outcome")
+
+  weeklyPlan     WeeklyPlan @relation(fields: [weeklyPlanId], references: [id])
+  assignments    ActivityAssignment[]
+  relatedTimelineItems TimelineItem[] @relation("ItemActivity")
+
+  @@map("planned_activities")
+}
+
+model ActivityAssignment {
+  id               String   @id @default(cuid())
+  plannedActivityId String  @map("planned_activity_id")
+  target           String   // AssignmentTarget
+  learnerProfileId String?  @map("learner_profile_id")
+  groupId          String?  @map("group_id")
+  dueDateTime      DateTime? @map("due_date_time")
+  gradingMode      String   @default("NONE") @map("grading_mode") // GradingMode
+  maxScore         Float?   @map("max_score")
+
+  plannedActivity  PlannedActivity @relation(fields: [plannedActivityId], references: [id])
+  learnerProfile   LearnerProfile? @relation("AssignmentLearner", fields: [learnerProfileId], references: [id])
+  evaluations      ActivityEvaluation[]
+
+  @@map("activity_assignments")
+}
+
+model ActivityEvaluation {
+  id                 String   @id @default(cuid())
+  activityAssignmentId String @map("activity_assignment_id")
+  learnerProfileId   String  @map("learner_profile_id")
+  status             String  @default("NOT_STARTED") // EvalStatus
+  score              Float?
+  trainerComment     String? @map("trainer_comment")
+  observedNotes      String? @map("observed_notes")
+  evaluatedById      String  @map("evaluated_by")
+  evaluatedAt        DateTime @default(now()) @map("evaluated_at")
+
+  activityAssignment ActivityAssignment @relation(fields: [activityAssignmentId], references: [id])
+  learnerProfile     LearnerProfile     @relation(fields: [learnerProfileId], references: [id])
+  evaluatedBy        User               @relation("EvaluatedBy", fields: [evaluatedById], references: [id])
+
+  @@map("activity_evaluations")
+}
+
+// ============================================================
+// PROJECT PLANNING & TIMELINE
+// ============================================================
+
+model ProjectPlan {
+  id          String    @id @default(cuid())
+  projectId   String    @map("project_id")
+  name        String
+  description String?
+  startDate   DateTime? @map("start_date")
+  endDate     DateTime? @map("end_date")
+  status      String    @default("DRAFT") // PlanStatus
+  createdById String    @map("created_by")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  project     Project   @relation(fields: [projectId], references: [id])
+  createdBy   User      @relation("PlanCreatedBy", fields: [createdById], references: [id])
+  phases      TimelinePhase[]
+
+  @@map("project_plans")
+}
+
+model TimelinePhase {
+  id             String    @id @default(cuid())
+  projectPlanId  String    @map("project_plan_id")
+  parentPhaseId  String?   @map("parent_phase_id")
+  title          String
+  description    String?
+  phaseType      String    @map("phase_type") // PhaseType
+  startDate      DateTime? @map("start_date")
+  endDate        DateTime? @map("end_date")
+  color          String?
+  orderIndex     Int       @default(0) @map("order_index")
+  status         String    @default("PLANNED") // PhaseStatus
+  ownerUserId    String?   @map("owner_user_id")
+  campusId       String?   @map("campus_id")
+  cohortId       String?   @map("cohort_id")
+  criteriaJson   String?   @map("criteria_json") // JSON: per-level evaluation criteria for this sprint
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  projectPlan    ProjectPlan    @relation(fields: [projectPlanId], references: [id])
+  parentPhase    TimelinePhase? @relation("SubPhases", fields: [parentPhaseId], references: [id])
+  childPhases    TimelinePhase[] @relation("SubPhases")
+  owner          User?          @relation("PhaseOwner", fields: [ownerUserId], references: [id])
+  campus         Campus?        @relation("PhaseCampus", fields: [campusId], references: [id])
+  cohort             Cohort?        @relation("PhaseCohort", fields: [cohortId], references: [id])
+  items              TimelineItem[]
+  sprintEvaluations  SprintEvaluation[]
+
+  @@map("timeline_phases")
+}
+
+model TimelineItem {
+  id                    String    @id @default(cuid())
+  phaseId               String    @map("phase_id")
+  title                 String
+  description           String?
+  itemType              String    @map("item_type") // ItemType
+  startDatetime         DateTime  @map("start_datetime")
+  endDatetime           DateTime? @map("end_datetime")
+  allDay                Boolean   @default(false) @map("all_day")
+  modality              String?   // Modality
+  location              String?
+  relatedCohortId       String?   @map("related_cohort_id")
+  relatedProjectId      String?   @map("related_project_id")
+  relatedWeeklyPlanId   String?   @map("related_weekly_plan_id")
+  relatedActivityId     String?   @map("related_activity_id")
+  responsibleUserId     String?   @map("responsible_user_id")
+  status                String    @default("PLANNED") // ItemStatus
+  priority              String?   // Priority
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  phase                 TimelinePhase     @relation(fields: [phaseId], references: [id])
+  relatedCohort         Cohort?           @relation("ItemCohort", fields: [relatedCohortId], references: [id])
+  relatedWeeklyPlan     WeeklyPlan?       @relation("ItemWeeklyPlan", fields: [relatedWeeklyPlanId], references: [id])
+  relatedActivity       PlannedActivity?  @relation("ItemActivity", fields: [relatedActivityId], references: [id])
+  responsibleUser       User?             @relation("ItemResponsible", fields: [responsibleUserId], references: [id])
+
+  predecessorDeps       TimelineDependency[] @relation("SuccessorItem")
+  successorDeps         TimelineDependency[] @relation("PredecessorItem")
+  comments              TimelineComment[]
+
+  @@map("timeline_items")
+}
+
+model TimelineDependency {
+  id                String @id @default(cuid())
+  predecessorItemId String @map("predecessor_item_id")
+  successorItemId   String @map("successor_item_id")
+  dependencyType    String @default("FINISH_TO_START") @map("dependency_type") // DependencyType
+
+  predecessorItem   TimelineItem @relation("PredecessorItem", fields: [predecessorItemId], references: [id])
+  successorItem     TimelineItem @relation("SuccessorItem", fields: [successorItemId], references: [id])
+
+  @@unique([predecessorItemId, successorItemId])
+  @@map("timeline_dependencies")
+}
+
+model TimelineComment {
+  id             String   @id @default(cuid())
+  timelineItemId String   @map("timeline_item_id")
+  userId         String   @map("user_id")
+  comment        String
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  timelineItem   TimelineItem @relation(fields: [timelineItemId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
+
+  @@map("timeline_comments")
+}
+
+// ============================================================
+// SPRINT EVALUATIONS (Pedagogical mastery per sprint)
+// ============================================================
+
+// MasteryLevel: DEBUTANT | OPERATIONNEL | AUTONOME | MOTEUR
+model SprintEvaluation {
+  id                String    @id @default(cuid())
+  learnerProfileId  String    @map("learner_profile_id")
+  sprintPhaseId     String    @map("sprint_phase_id")
+  masteryLevel      Int       @map("mastery_level") // 1=Débutant, 2=Opérationnel, 3=Autonome, 4=Moteur
+  comment           String?
+  evaluatedById     String    @map("evaluated_by")
+  evaluatedAt       DateTime  @default(now()) @map("evaluated_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  learnerProfile    LearnerProfile @relation(fields: [learnerProfileId], references: [id])
+  sprintPhase       TimelinePhase  @relation(fields: [sprintPhaseId], references: [id])
+  evaluatedBy       User           @relation("SprintEvaluator", fields: [evaluatedById], references: [id])
+
+  @@unique([learnerProfileId, sprintPhaseId])
+  @@map("sprint_evaluations")
+}
+
+// ============================================================
+// FIL ROUGE — Capstone Project Tracking
+// ============================================================
+
+model FilRougeProject {
+  id           String    @id @default(cuid())
+  cohortId     String    @unique @map("cohort_id")
+  name         String    // e.g. "Projet Data Analyst"
+  description  String?
+  assignedAt   DateTime? @map("assigned_at") // date assigned (mid-training)
+  defenseDate  DateTime? @map("defense_date") // final soutenance date
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  cohort        Cohort            @relation(fields: [cohortId], references: [id])
+  phases        FilRougePhase[]
+
+  @@map("fil_rouge_projects")
+}
+
+model FilRougePhase {
+  id               String    @id @default(cuid())
+  filRougeProjectId String   @map("fil_rouge_project_id")
+  name             String
+  description      String?
+  deadline         DateTime?
+  orderIndex       Int       @default(0) @map("order_index")
+  isOptional       Boolean   @default(false) @map("is_optional")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  filRougeProject  FilRougeProject        @relation(fields: [filRougeProjectId], references: [id], onDelete: Cascade)
+  submissions      FilRougeSubmission[]
+
+  @@map("fil_rouge_phases")
+}
+
+// Status: PENDING | IN_PROGRESS | SUBMITTED | TO_VALIDATE | VALIDATED | REJECTED
+model FilRougeSubmission {
+  id               String    @id @default(cuid())
+  learnerProfileId String    @map("learner_profile_id")
+  phaseId          String    @map("phase_id")
+  status           String    @default("PENDING") // SubmissionStatus
+  startDate        DateTime? @map("start_date")
+  endDate          DateTime? @map("end_date")
+  deliverableUrl   String?   @map("deliverable_url")
+  learnerNote      String?   @map("learner_note")
+  trainerValidated Boolean   @default(false) @map("trainer_validated")
+  trainerComment   String?   @map("trainer_comment")
+  validatedById    String?   @map("validated_by")
+  submittedAt      DateTime? @map("submitted_at")
+  validatedAt      DateTime? @map("validated_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  learnerProfile   LearnerProfile @relation(fields: [learnerProfileId], references: [id])
+  phase            FilRougePhase  @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  validatedBy      User?          @relation("FilRougeValidator", fields: [validatedById], references: [id])
+
+  @@unique([learnerProfileId, phaseId])
+  @@map("fil_rouge_submissions")
+}
+
+// ============================================================
+// JURY BLANC — Mock Jury Evaluation Grid
+// ============================================================
+
+// One cohort can have multiple jury blanc sessions (Jury Blanc 1, Final, etc.)
+model JuryBlancSession {
+  id          String    @id @default(cuid())
+  cohortId    String    @map("cohort_id")
+  name        String    // "Jury Blanc 1", "Jury Blanc Final"
+  date        DateTime?
+  description String?
+  isLocked    Boolean   @default(false) @map("is_locked") // freeze after grading
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  cohort        Cohort                    @relation(fields: [cohortId], references: [id])
+  competencies  JuryBlancCompetency[]
+  evaluations   JuryBlancEvaluation[]
+  learnerRecords JuryBlancLearnerRecord[]
+
+  @@map("jury_blanc_sessions")
+}
+
+// Per-learner summary record (general comment, jury/trainer levels, project ratings)
+// Level values: EXCELLENT | BON | OK | INSUFFISANT | ABSENT
+model JuryBlancLearnerRecord {
+  id               String    @id @default(cuid())
+  sessionId        String    @map("session_id")
+  learnerProfileId String    @map("learner_profile_id")
+  generalComment   String?   @map("general_comment")
+  juryLevel        String?   @map("jury_level")       // EXCELLENT | BON | OK | INSUFFISANT | ABSENT
+  trainerLevel     String?   @map("trainer_level")
+  projectClarity   String?   @map("project_clarity")       // Clarté et structure du code
+  projectImpl      String?   @map("project_impl")          // Implémentation des fonctionnalités
+  projectExplain   String?   @map("project_explain")       // Explication du code
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  session          JuryBlancSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  learnerProfile   LearnerProfile   @relation(fields: [learnerProfileId], references: [id])
+
+  @@unique([sessionId, learnerProfileId])
+  @@map("jury_blanc_learner_records")
+}
+
+
+// Configurable competencies per session (Technique or Transversal)
+model JuryBlancCompetency {
+  id          String    @id @default(cuid())
+  sessionId   String    @map("session_id")
+  category    String    @default("TECHNIQUE") // TECHNIQUE | TRANSVERSAL
+  code        String    // "C1", "C2", "T1", etc.
+  name        String    // Short label for column header
+  description String?   // Full description shown on hover
+  orderIndex  Int       @default(0) @map("order_index")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  session     JuryBlancSession          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  evaluations JuryBlancEvaluation[]
+
+  @@map("jury_blanc_competencies")
+}
+
+// Status: PENDING | VALIDATED | NOT_VALIDATED | IN_PROGRESS | ABSENT | EXCUSED
+model JuryBlancEvaluation {
+  id               String    @id @default(cuid())
+  sessionId        String    @map("session_id")
+  learnerProfileId String    @map("learner_profile_id")
+  competencyId     String    @map("competency_id")
+  status           String    @default("PENDING")
+  comment          String?
+  projectTitle     String?   @map("project_title") // learner's project title
+  evaluatedAt      DateTime? @map("evaluated_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  session          JuryBlancSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  learnerProfile   LearnerProfile       @relation(fields: [learnerProfileId], references: [id])
+  competency       JuryBlancCompetency  @relation(fields: [competencyId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, learnerProfileId, competencyId])
+  @@map("jury_blanc_evaluations")
+}
+
+// ============================================================
+// AUDIT LOG (for critical actions)
+// ============================================================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?  @map("user_id")
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id")
+  details    String?
+  ipAddress  String?  @map("ip_address")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("audit_logs")
+}
+
+// ============================================================
+// POINTS DE SUIVI APPRENANT — Learner Meeting Log
+// ============================================================
+
+// Types: CADRAGE | SUIVI | DEBRIEF | AVERTISSEMENT | ENCOURAGEMENT | BILAN | OTHER
+model LearnerMeeting {
+  id               String    @id @default(cuid())
+  learnerProfileId String    @map("learner_profile_id")
+  organizedById    String?   @map("organized_by_id")
+  type             String    @default("SUIVI")  // meeting type
+  title            String    // e.g. "Point cadrage mi-formation"
+  date             DateTime
+  notes            String?   // compte-rendu / observations
+  outcome          String?   // actions décidées / suites à donner
+  isPrivate        Boolean   @default(false) @map("is_private") // hidden from learner view
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  learnerProfile   LearnerProfile @relation(fields: [learnerProfileId], references: [id])
+  organizedBy      User?          @relation("MeetingOrganizer", fields: [organizedById], references: [id])
+
+  @@map("learner_meetings")
+}
+
+// ============================================================
+// PRPE — Période de Redressement Pédagogique Encadrée
+// ============================================================
+// caseType: A (absences + low level, 7-10j), B (absences + good level, 10-15j), C (posture/exit, 7-10j)
+// status: DRAFT | ACTIVE | MAINTAINED | EXIT_NO_ENGAGEMENT | EXIT_POST_PRPE
+model PRPECase {
+  id               String    @id @default(cuid())
+  learnerProfileId String    @map("learner_profile_id")
+  createdById      String?   @map("created_by_id")
+  caseType         String    @default("A") @map("case_type")  // A | B | C
+  status           String    @default("DRAFT") // DRAFT | ACTIVE | MAINTAINED | EXIT_NO_ENGAGEMENT | EXIT_POST_PRPE
+
+  // Trigger context
+  startDate          DateTime  @map("start_date")
+  endDate            DateTime? @map("end_date")
+  triggerAbsenceDays Int       @default(0) @map("trigger_absence_days")
+  triggerNotes       String?   @map("trigger_notes") // factual reasons (absences, livrables, incidents)
+
+  // Step 0 — Preparation
+  step0PreparedAt    DateTime? @map("step0_prepared_at")
+  step0Notes         String?   @map("step0_notes")
+
+  // Step 1 — J0: activation mail sent
+  step1MailSentAt    DateTime? @map("step1_mail_sent_at")
+
+  // Step 2 — J+1/J+2: convocation + signature
+  step2MeetingAt     DateTime? @map("step2_meeting_at")
+  step2CRNotes       String?   @map("step2_cr_notes")
+  engagementSigned   Boolean   @default(false) @map("engagement_signed")
+
+  // Step 3 — Relance (si non-engagement)
+  step3RelanceSentAt DateTime? @map("step3_relance_sent_at")
+
+  // Step 4 — Suivi PRPE en cours
+  step4TrackingNotes String?   @map("step4_tracking_notes")
+
+  // Step 5 — Final decision
+  decisionAt         DateTime? @map("decision_at")
+  outcome            String?   // MAINTAINED | EXIT_NO_ENGAGEMENT | EXIT_POST_PRPE
+  outcomeNotes       String?   @map("outcome_notes")
+
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  learnerProfile     LearnerProfile @relation(fields: [learnerProfileId], references: [id])
+  createdBy          User?          @relation("PRPECreator", fields: [createdById], references: [id])
+
+  @@map("prpe_cases")
+}
