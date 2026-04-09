@@ -62,3 +62,17 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+  const { error } = await requireAuth(['SUPER_ADMIN']);
+  if (error) return error;
+
+  try {
+    await prisma.cohort.delete({
+      where: { id: params.id }
+    });
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    return NextResponse.json({ error: 'Erreur lors de la suppression. Des données (apprenants, émargements) sont liées à cette cohorte.' }, { status: 500 });
+  }
+}

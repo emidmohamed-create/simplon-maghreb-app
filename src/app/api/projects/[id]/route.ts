@@ -55,3 +55,17 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
   return NextResponse.json(project);
 }
+
+export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+  const { error } = await requireAuth(['SUPER_ADMIN']);
+  if (error) return error;
+
+  try {
+    await prisma.project.delete({
+      where: { id: params.id }
+    });
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    return NextResponse.json({ error: 'Erreur lors de la suppression. Des données sont liées à ce projet.' }, { status: 500 });
+  }
+}
