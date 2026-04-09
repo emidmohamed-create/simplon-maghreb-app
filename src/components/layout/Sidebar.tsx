@@ -75,12 +75,8 @@ export default function Sidebar() {
       </button>
 
       <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}>
-        <div className="sidebar-logo">
-          <div className="sidebar-logo-icon">SM</div>
-          <div>
-            <div className="sidebar-logo-text">Simplon Maghreb</div>
-            <div className="sidebar-logo-sub">Gestion des formations</div>
-          </div>
+        <div className="sidebar-logo" style={{ padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <img src="/logo-simplon-white.png" alt="Simplon Maghreb" style={{ maxHeight: '42px', objectFit: 'contain' }} />
         </div>
 
         <nav className="sidebar-nav">

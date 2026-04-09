@@ -31,7 +31,7 @@ export async function GET(req: Request) {
       campus: { select: { name: true } },
       project: { select: { name: true, code: true } },
       evaluations: { select: { id: true, score: true, recommendation: true } },
-      learnerProfile: { select: { id: true } },
+      learnerProfiles: { select: { id: true } },
     },
   });
 

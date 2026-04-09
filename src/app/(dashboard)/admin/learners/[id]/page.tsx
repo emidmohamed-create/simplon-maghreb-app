@@ -28,6 +28,7 @@ const TABS = [
   { key: 'filrouge',   label: '🎯 Fil Rouge' },
   { key: 'meetings',   label: '🤝 Points de suivi' },
   { key: 'attendance', label: '📅 Présences' },
+  { key: 'insertion',  label: '💼 Suivi Insertion' },
   { key: 'profile',    label: '👤 Profil' },
 ];
 
@@ -808,6 +809,52 @@ export default function LearnerDetailPage() {
               </table>
             </div>
           </>
+        )}
+
+        {/* ══════════════ TAB: INSERTION FOLLOWUP ══════════════ */}
+        {activeTab === 'insertion' && (
+          <div className="card">
+            <div className="card-header"><h3 className="card-title">💼 Calendrier de suivi d'insertion</h3></div>
+            {(learner.insertionFollowUps || []).length === 0 ? (
+               <div className="card-body" style={{ textAlign: 'center', padding: '40px 24px' }}>
+                 <p className="text-muted text-sm">Aucun suivi planifié pour cet apprenant.</p>
+               </div>
+            ) : (
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Date prévue</th>
+                    <th>Modèle</th>
+                    <th>Statut</th>
+                    <th>Notes & Échanges</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {learner.insertionFollowUps.map((f: any) => (
+                    <tr key={f.id}>
+                      <td style={{ fontWeight: 600 }}>{new Date(f.plannedDate).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                      <td>{f.modality === 'CALL' ? '📞 Appel' : f.modality === 'ONLINE_MEETING' ? '💻 Visio' : f.modality === 'IN_PERSON' ? '👥 Présentiel' : '✉️ Email'}</td>
+                      <td>
+                        <span className={`badge ${f.status === 'COMPLETED' ? 'badge-green' : f.status === 'SCHEDULED' ? 'badge-blue' : f.status === 'NO_SHOW' ? 'badge-orange' : 'badge-red'}`}>
+                          {f.status === 'COMPLETED' ? '✅ Réalisé' : f.status === 'SCHEDULED' ? '📅 Planifié' : f.status === 'NO_SHOW' ? '⚠️ Injoignable' : '❌ Annulé'}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                        <div style={{ marginBottom: f.attachmentPath ? 4 : 0 }}>
+                          {f.notes ? f.notes : <span style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>Aucune note</span>}
+                        </div>
+                        {f.attachmentPath && (
+                          <a href={f.attachmentPath} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: 'var(--primary-600)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, background: 'var(--primary-50)', padding: '2px 8px', borderRadius: 10 }}>
+                            📎 {f.attachmentName || 'Pièce jointe'}
+                          </a>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         )}
 
         {/* ══════════════ TAB: PROFILE ══════════════ */}

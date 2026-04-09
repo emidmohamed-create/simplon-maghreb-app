@@ -17,3 +17,42 @@ export async function GET() {
 
   return NextResponse.json(users);
 }
+
+export async function POST(req: Request) {
+  const { error } = await requireAuth(['SUPER_ADMIN']);
+  if (error) return error;
+
+  try {
+    const body = await req.json();
+    const { firstName, lastName, email, role, password, campusId } = body;
+
+    if (!firstName || !lastName || !email || !password) {
+      return NextResponse.json({ error: 'Champs obligatoires manquants' }, { status: 400 });
+    }
+
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return NextResponse.json({ error: 'Cet email est déjà utilisé' }, { status: 400 });
+    }
+
+    // Import hash directly or locally
+    const bcrypt = await import('bcryptjs');
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    const user = await prisma.user.create({
+      data: {
+        firstName,
+        lastName,
+        email,
+        role: role || 'LEARNER',
+        passwordHash,
+        campusId: campusId || null,
+      },
+    });
+
+    return NextResponse.json(user, { status: 201 });
+  } catch (err: any) {
+    console.error(err);
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+  }
+}

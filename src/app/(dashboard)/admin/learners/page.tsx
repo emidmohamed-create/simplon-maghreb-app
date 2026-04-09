@@ -15,12 +15,58 @@ export default function LearnersPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
+  // States for Assignment Modal
+  const [showAssign, setShowAssign] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
+  const [cohorts, setCohorts] = useState<any[]>([]);
+  const [form, setForm] = useState({ userId: '', cohortId: '' });
+  const [saving, setSaving] = useState(false);
+
+  const loadOptions = () => {
+    fetch('/api/users').then(r => r.json()).then(setUsers).catch(() => setUsers([]));
+    fetch('/api/cohorts').then(r => r.json()).then(setCohorts).catch(() => setCohorts([]));
+  };
+
   useEffect(() => {
+    loadOptions();
+  }, []);
+
+  const loadLearners = () => {
+    setLoading(true);
     const params = new URLSearchParams();
     if (search) params.set('search', search);
     if (statusFilter) params.set('status', statusFilter);
     fetch(`/api/learners?${params}`).then(r => r.json()).then(setLearners).finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadLearners();
   }, [search, statusFilter]);
+
+  const handleAssign = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.userId || !form.cohortId) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/learners', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Erreur lors de l'assignation");
+      } else {
+        setShowAssign(false);
+        setForm({ userId: '', cohortId: '' });
+        loadLearners();
+      }
+    } catch (err) {
+      alert("Erreur réseau");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <>
@@ -28,6 +74,9 @@ export default function LearnersPage() {
         <div>
           <h1 className="page-title">Apprenants</h1>
           <p className="page-subtitle">Suivi de tous les apprenants</p>
+        </div>
+        <div>
+          <button className="btn btn-primary" onClick={() => setShowAssign(true)}>+ Assigner à une formation</button>
         </div>
       </div>
       <div className="page-body">
@@ -49,7 +98,7 @@ export default function LearnersPage() {
             <table className="data-table">
               <thead><tr><th>Nom</th><th>Email</th><th>Cohorte</th><th>Programme</th><th>Campus</th><th>Statut</th><th>Insertion</th></tr></thead>
               <tbody>
-                {learners.map(l => (
+                {learners.map((l: any) => (
                   <tr key={l.id} className="clickable" onClick={() => router.push(`/admin/learners/${l.id}`)}>
                     <td style={{ fontWeight: 600 }}>{l.firstName} {l.lastName}</td>
                     <td>{l.email}</td>
@@ -65,6 +114,49 @@ export default function LearnersPage() {
           </div>
         )}
       </div>
+
+      {showAssign && (
+        <div className="modal-overlay" onClick={() => setShowAssign(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">Assigner à une formation</h2>
+              <button className="btn btn-ghost btn-icon" onClick={() => setShowAssign(false)}>✕</button>
+            </div>
+            <form onSubmit={handleAssign}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label className="form-label">Sélectionner un utilisateur existant</label>
+                  <select className="form-select" required value={form.userId} onChange={e => setForm({...form, userId: e.target.value})}>
+                    <option value="">Rechercher un utilisateur...</option>
+                    {users.map(u => (
+                      <option key={u.id} value={u.id}>{u.firstName} {u.lastName} ({u.email}) - {u.role}</option>
+                    ))}
+                  </select>
+                  <p className="text-muted" style={{ fontSize: 11, marginTop: 4 }}>
+                    Le profil utilisateur doit avoir été créé dans l&apos;onglet Utilisateurs.
+                  </p>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Sélectionner la cohorte d&apos;affectation</label>
+                  <select className="form-select" required value={form.cohortId} onChange={e => setForm({...form, cohortId: e.target.value})}>
+                    <option value="">Sélectionner...</option>
+                    {cohorts.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowAssign(false)}>Annuler</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>
+                  {saving ? "⏳ Création..." : "🎓 Inscrire et générer le profil"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }

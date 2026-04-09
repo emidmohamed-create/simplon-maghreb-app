@@ -27,18 +27,24 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ error: 'Ce candidat a déjà été converti' }, { status: 400 });
   }
 
-  // Create user account for the learner
-  const passwordHash = await hash('password123', 12);
-  const learnerUser = await prisma.user.create({
-    data: {
-      email: candidate.email,
-      passwordHash,
-      firstName: candidate.firstName,
-      lastName: candidate.lastName,
-      role: 'LEARNER',
-      campusId: candidate.campusId,
-    },
+  // Find or Create user account for the learner
+  let learnerUser = await prisma.user.findUnique({
+    where: { email: candidate.email }
   });
+
+  if (!learnerUser) {
+    const passwordHash = await hash('password123', 12);
+    learnerUser = await prisma.user.create({
+      data: {
+        email: candidate.email,
+        passwordHash,
+        firstName: candidate.firstName,
+        lastName: candidate.lastName,
+        role: 'LEARNER',
+        campusId: candidate.campusId,
+      },
+    });
+  }
 
   // Create learner profile
   const learner = await prisma.learnerProfile.create({

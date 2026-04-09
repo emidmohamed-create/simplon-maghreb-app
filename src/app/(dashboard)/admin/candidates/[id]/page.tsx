@@ -171,11 +171,11 @@ export default function CandidateDetailPage() {
           {candidate.currentStage !== 'CONVERTED' && candidate.currentStage !== 'REJECTED' && (
             <button className="btn btn-warning" onClick={() => setShowEvalModal(true)}>📋 Évaluer</button>
           )}
-          {(candidate.currentStage === 'EVALUATED' || candidate.currentStage === 'SELECTED') && !candidate.learnerProfile && (
+          {(candidate.currentStage === 'EVALUATED' || candidate.currentStage === 'SELECTED') && (!candidate.learnerProfiles || candidate.learnerProfiles.length === 0) && (
             <button className="btn btn-primary" onClick={() => setShowConvert(true)}>🎓 Convertir en apprenant</button>
           )}
-          {candidate.learnerProfile && (
-            <Link href={`/admin/learners/${candidate.learnerProfile.id}`} className="btn btn-primary">👤 Voir apprenant</Link>
+          {candidate.learnerProfiles && candidate.learnerProfiles.length > 0 && (
+            <Link href={`/admin/learners/${candidate.learnerProfiles[0].id}`} className="btn btn-primary">👤 Voir apprenant</Link>
           )}
         </div>
       </div>

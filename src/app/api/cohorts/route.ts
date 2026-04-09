@@ -83,7 +83,7 @@ export async function POST(req: Request) {
         let planCreatorId = user?.id;
         if (!planCreatorId) {
           const fallbackUser = await prisma.user.findFirst({ where: { role: 'SUPER_ADMIN' } });
-          planCreatorId = fallbackUser?.id;
+          planCreatorId = fallbackUser?.id || '';
         }
         if (!planCreatorId) {
           console.warn('[PLANNING] No user found to create plan, skipping planning generation');

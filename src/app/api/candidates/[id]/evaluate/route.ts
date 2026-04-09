@@ -15,7 +15,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     let evaluatorId = user?.id;
     if (!evaluatorId) {
       const fallback = await prisma.user.findFirst();
-      evaluatorId = fallback?.id;
+      evaluatorId = fallback?.id || '';
     }
     if (!evaluatorId) return NextResponse.json({ error: 'Aucun utilisateur' }, { status: 500 });
 

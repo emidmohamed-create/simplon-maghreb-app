@@ -22,6 +22,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         },
       },
       candidate: true,
+      insertionFollowUps: { orderBy: { plannedDate: 'asc' } },
       documents: { orderBy: { uploadedAt: 'desc' } },
       statusHistory: {
         orderBy: { createdAt: 'desc' },

@@ -90,8 +90,8 @@ export default function CandidatesPage() {
                       {c.currentStage !== 'CONVERTED' && c.currentStage !== 'REJECTED' && (
                         <button className="btn btn-sm btn-primary" onClick={(e) => { e.stopPropagation(); setShowConvert(c.id); }}>Convertir</button>
                       )}
-                      {c.learnerProfile && (
-                        <button className="btn btn-sm btn-secondary" onClick={e => { e.stopPropagation(); router.push(`/admin/learners/${c.learnerProfile.id}`); }}>Voir apprenant</button>
+                      {c.learnerProfiles && c.learnerProfiles.length > 0 && (
+                        <button className="btn btn-sm btn-secondary" onClick={e => { e.stopPropagation(); router.push(`/admin/learners/${c.learnerProfiles[0].id}`); }}>Voir apprenant</button>
                       )}
                     </td>
                   </tr>

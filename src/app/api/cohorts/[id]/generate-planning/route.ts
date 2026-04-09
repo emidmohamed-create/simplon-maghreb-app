@@ -49,16 +49,16 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     let creatorId = user?.id;
     if (creatorId) {
       const existingUser = await prisma.user.findUnique({ where: { id: creatorId } });
-      if (!existingUser) creatorId = undefined;
+      if (!existingUser) creatorId = '';
     }
     if (!creatorId) {
       const fallback = await prisma.user.findFirst({ where: { role: 'SUPER_ADMIN' } });
-      creatorId = fallback?.id;
+      creatorId = fallback?.id || '';
     }
     if (!creatorId) {
       // Last resort: any user
       const anyUser = await prisma.user.findFirst();
-      creatorId = anyUser?.id;
+      creatorId = anyUser?.id || '';
     }
     if (!creatorId) return NextResponse.json({ error: 'Aucun utilisateur en base — veuillez lancer le seed' }, { status: 500 });
 

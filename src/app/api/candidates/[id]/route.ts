@@ -16,7 +16,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         include: { evaluator: { select: { firstName: true, lastName: true } } },
         orderBy: { evaluationDate: 'desc' },
       },
-      learnerProfile: { select: { id: true, cohortId: true, statusCurrent: true, cohort: { select: { name: true } } } },
+      learnerProfiles: { select: { id: true, cohortId: true, statusCurrent: true, cohort: { select: { name: true } } } },
     },
   });
 

@@ -39,9 +39,8 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <div className="login-logo">
-          <div className="login-logo-icon">SM</div>
-          <h1 className="login-title">Simplon Maghreb</h1>
+        <div className="login-logo" style={{ marginBottom: 32, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <img src="/logo-simplon-color.png" alt="Simplon Maghreb" style={{ maxHeight: '60px', objectFit: 'contain', marginBottom: 16 }} />
           <p className="login-subtitle">Plateforme de gestion des formations</p>
         </div>
 
