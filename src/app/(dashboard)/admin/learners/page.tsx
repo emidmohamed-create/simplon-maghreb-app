@@ -34,9 +34,12 @@ export default function LearnersPage() {
   const [statusFilter, setStatusFilter] = useState('');
 
   const [showAssign, setShowAssign] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editingId, setEditingId] = useState<string>('');
   const [users, setUsers] = useState<any[]>([]);
   const [cohorts, setCohorts] = useState<any[]>([]);
   const [form, setForm] = useState(EMPTY_ASSIGN_FORM);
+  const [editForm, setEditForm] = useState<any>(null);
   const [saving, setSaving] = useState(false);
 
   const loadOptions = () => {
@@ -111,6 +114,49 @@ export default function LearnersPage() {
       return;
     }
     loadLearners();
+  };
+
+  const openEditLearner = (learner: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingId(learner.id);
+    setEditForm({
+      firstName: learner.firstName || '',
+      lastName: learner.lastName || '',
+      email: learner.email || '',
+      phone: learner.phone || '',
+      cin: learner.cin || '',
+      birthdate: learner.birthdate ? new Date(learner.birthdate).toISOString().split('T')[0] : '',
+      gender: learner.gender || '',
+      emergencyContact: learner.emergencyContact || '',
+      academicLevel: learner.academicLevel || '',
+      academicField: learner.academicField || '',
+      cohortId: learner.cohortId || '',
+    });
+    setShowEdit(true);
+  };
+
+  const handleUpdateLearner = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingId || !editForm) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/learners/${editingId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Erreur lors de la modification');
+        return;
+      }
+      setShowEdit(false);
+      setEditingId('');
+      setEditForm(null);
+      loadLearners();
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -191,9 +237,17 @@ export default function LearnersPage() {
                     </td>
                     <td>{l.insertionType ? INSERTION_LABELS[l.insertionType] || l.insertionType : '-'}</td>
                     <td>
-                      <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red-600)' }} onClick={(e) => handleDeleteLearner(l.id, `${l.firstName} ${l.lastName}`, e)}>
-                        Supprimer
-                      </button>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button className="btn btn-ghost btn-sm" onClick={(e) => { e.stopPropagation(); router.push(`/admin/learners/${l.id}`); }}>
+                          Voir
+                        </button>
+                        <button className="btn btn-ghost btn-sm" onClick={(e) => openEditLearner(l, e)}>
+                          Modifier
+                        </button>
+                        <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red-600)' }} onClick={(e) => handleDeleteLearner(l.id, `${l.firstName} ${l.lastName}`, e)}>
+                          Supprimer
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -300,6 +354,90 @@ export default function LearnersPage() {
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={saving}>
                   {saving ? 'Creation...' : 'Inscrire apprenant'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEdit && editForm && (
+        <div className="modal-overlay" onClick={() => setShowEdit(false)}>
+          <div className="modal" style={{ maxWidth: 760 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">Modifier l'apprenant</h2>
+              <button className="btn btn-ghost btn-icon" onClick={() => setShowEdit(false)}>x</button>
+            </div>
+            <form onSubmit={handleUpdateLearner}>
+              <div className="modal-body">
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Prenom</label>
+                    <input className="form-input" value={editForm.firstName} onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Nom</label>
+                    <input className="form-input" value={editForm.lastName} onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })} />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Email</label>
+                    <input type="email" className="form-input" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Telephone</label>
+                    <input className="form-input" value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">CIN</label>
+                    <input className="form-input" value={editForm.cin} onChange={(e) => setEditForm({ ...editForm, cin: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Date de naissance</label>
+                    <input type="date" className="form-input" value={editForm.birthdate} onChange={(e) => setEditForm({ ...editForm, birthdate: e.target.value })} />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Genre</label>
+                    <select className="form-select" value={editForm.gender} onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}>
+                      <option value="">Non precise</option>
+                      <option value="MALE">Homme</option>
+                      <option value="FEMALE">Femme</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Contact urgence</label>
+                    <input className="form-input" value={editForm.emergencyContact} onChange={(e) => setEditForm({ ...editForm, emergencyContact: e.target.value })} />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Niveau academique</label>
+                    <input className="form-input" value={editForm.academicLevel} onChange={(e) => setEditForm({ ...editForm, academicLevel: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Filiere</label>
+                    <input className="form-input" value={editForm.academicField} onChange={(e) => setEditForm({ ...editForm, academicField: e.target.value })} />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Cohorte</label>
+                  <select className="form-select" value={editForm.cohortId} onChange={(e) => setEditForm({ ...editForm, cohortId: e.target.value })}>
+                    <option value="">Selectionner...</option>
+                    {cohorts.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowEdit(false)}>Annuler</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>
+                  {saving ? 'Enregistrement...' : 'Enregistrer'}
                 </button>
               </div>
             </form>

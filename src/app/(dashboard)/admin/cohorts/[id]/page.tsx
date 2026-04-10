@@ -20,9 +20,9 @@ const PHASE_COLORS: Record<string, string> = {
 };
 
 const PHASE_TYPE_LABELS: Record<string, string> = {
-  SOURCING: 'Sourcing', SELECTION: 'SÃ©lection', WARMUP: 'Warmup',
+  SOURCING: 'Sourcing', SELECTION: 'Selection', WARMUP: 'Warmup',
   TRAINING: 'Formation', WORKSHOP: 'Atelier', FIL_ROUGE: 'Fil Rouge',
-  EVALUATION: 'Ã‰valuation', CERTIFICATION: 'Certification',
+  EVALUATION: 'Evaluation', CERTIFICATION: 'Certification',
   INSERTION: 'Insertion', OTHER: 'Autre',
 };
 
@@ -62,7 +62,7 @@ export default function CohortDetailPage() {
 
   const handleGeneratePlanning = async () => {
     if (!cohort.startDate || !cohort.endDate) {
-      alert('La cohorte doit avoir des dates de dÃ©but et de fin pour gÃ©nÃ©rer le planning.');
+      alert('La cohorte doit avoir des dates de debut et de fin pour generer le planning.');
       return;
     }
     setGenerating(true);
@@ -101,7 +101,7 @@ export default function CohortDetailPage() {
   useEffect(() => { load(); }, [load]);
 
   if (loading) return <div className="page-body"><div className="loading-overlay"><span className="loading-spinner" /> Chargement...</div></div>;
-  if (!cohort) return <div className="page-body"><div className="empty-state"><p>Cohorte non trouvÃ©e</p></div></div>;
+  if (!cohort) return <div className="page-body"><div className="empty-state"><p>Cohorte non trouvee</p></div></div>;
 
   const phases = cohort.phases || [];
 
@@ -112,23 +112,23 @@ export default function CohortDetailPage() {
 
   const statusData = [
     { name: 'En formation', value: active, color: STATUS_COLORS.IN_TRAINING },
-    { name: 'AbandonnÃ©s', value: dropped, color: STATUS_COLORS.DROPPED },
-    { name: 'InsÃ©rÃ©s', value: inserted, color: STATUS_COLORS.INSERTED },
+    { name: 'Abandonnes', value: dropped, color: STATUS_COLORS.DROPPED },
+    { name: 'Inseres', value: inserted, color: STATUS_COLORS.INSERTED },
     { name: 'Exclus', value: excluded, color: STATUS_COLORS.EXCLUDED },
   ].filter(d => d.value > 0);
 
   const now = new Date();
   const cohortStatus = cohort.startDate && now >= new Date(cohort.startDate)
-    ? (cohort.endDate && now > new Date(cohort.endDate) ? 'TerminÃ©e' : 'En cours')
-    : 'Ã€ venir';
+    ? (cohort.endDate && now > new Date(cohort.endDate) ? 'Terminee' : 'En cours')
+    : 'A venir';
 
-  // â”€â”€â”€ Timeline helpers â”€â”€â”€
+  // Timeline helpers
   const renderTimeline = () => {
     if (phases.length === 0) {
       return (
         <div className="empty-state">
           <p className="empty-state-text mb-4">Aucune phase dans le planning de cette formation.</p>
-          <p className="text-sm text-muted">CrÃ©ez une nouvelle cohorte avec des dates de dÃ©but et de fin pour gÃ©nÃ©rer automatiquement un planning.</p>
+          <p className="text-sm text-muted">Creez une nouvelle cohorte avec des dates de debut et de fin pour generer automatiquement un planning.</p>
         </div>
       );
     }
@@ -211,7 +211,7 @@ export default function CohortDetailPage() {
                   {bs && (
                     <div
                       style={{ position: 'absolute', top: 5, height: ROW_H - 10, left: bs.left, width: bs.width, background: color, borderRadius: 4, display: 'flex', alignItems: 'center', overflow: 'hidden', cursor: 'default' }}
-                      title={`${phase.title}\n${phase.startDate ? formatDate(phase.startDate) : '?'} â†’ ${phase.endDate ? formatDate(phase.endDate) : '?'}`}
+                      title={`${phase.title}\n${phase.startDate ? formatDate(phase.startDate) : '?'} -> ${phase.endDate ? formatDate(phase.endDate) : '?'}`}
                     >
                       <span style={{ fontSize: 9, color: 'white', padding: '0 6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{phase.title}</span>
                     </div>
@@ -242,12 +242,12 @@ export default function CohortDetailPage() {
         <div>
           <div className="breadcrumbs"><Link href="/admin/cohorts">Cohortes</Link> / <span>{cohort.name}</span></div>
           <h1 className="page-title">{cohort.name}</h1>
-          <p className="page-subtitle">{cohort.program?.name} â€” {cohort.campus?.name || '-'}</p>
+          <p className="page-subtitle">{cohort.program?.name} - {cohort.campus?.name || '-'}</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {phases.length === 0 && cohort.startDate && cohort.endDate && (
             <button className="btn btn-warning" onClick={handleGeneratePlanning} disabled={generating}>
-              {generating ? 'â³ GÃ©nÃ©ration...' : 'ðŸ”„ GÃ©nÃ©rer le planning'}
+              {generating ? 'Generation...' : 'Generer le planning'}
             </button>
           )}
           <button className="btn btn-secondary" onClick={() => setEditCohort({
@@ -257,12 +257,12 @@ export default function CohortDetailPage() {
             capacity: cohort.capacity || '',
             trainerId: cohort.trainer?.id || '',
             projectId: cohort.project?.id || '',
-          })}>âœï¸ Modifier la cohorte</button>
-          <Link href={`/admin/cohorts/${params.id}/evaluations`} className="btn btn-primary">ðŸ“ Ã‰valuations Sprints</Link>
-          <Link href={`/admin/cohorts/${params.id}/fil-rouge`} className="btn btn-primary">ðŸŽ¯ Fil Rouge</Link>
-          <Link href={`/admin/cohorts/${params.id}/jury-blanc`} className="btn btn-primary">âš–ï¸ Jury Blanc</Link>
-          <Link href={`/admin/cohorts/${params.id}/insertion`} className="btn btn-primary">ðŸ“Š Rapport Insertion</Link>
-          <Link href={`/trainer/cohorts/${params.id}/attendance`} className="btn btn-secondary">Saisir prÃ©sence</Link>
+          })}>Modifier la cohorte</button>
+          <Link href={`/admin/cohorts/${params.id}/evaluations`} className="btn btn-primary">Evaluations Sprints</Link>
+          <Link href={`/admin/cohorts/${params.id}/fil-rouge`} className="btn btn-primary">Fil Rouge</Link>
+          <Link href={`/admin/cohorts/${params.id}/jury-blanc`} className="btn btn-primary">Jury Blanc</Link>
+          <Link href={`/admin/cohorts/${params.id}/insertion`} className="btn btn-primary">Rapport Insertion</Link>
+          <Link href={`/trainer/cohorts/${params.id}/attendance`} className="btn btn-secondary">Saisir presence</Link>
         </div>
       </div>
 
@@ -270,27 +270,27 @@ export default function CohortDetailPage() {
         <div className="tabs">
           <button className={`tab ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>Vue d&apos;ensemble</button>
           <button className={`tab ${activeTab === 'planning' ? 'active' : ''}`} onClick={() => setActiveTab('planning')}>
-            ðŸ“… Planning Formation
+            Planning Formation
             {phases.length > 0 && <span className="badge badge-blue" style={{ marginLeft: 6, fontSize: 10 }}>{phases.length} phases</span>}
           </button>
-          <button className={`tab ${activeTab === 'phases' ? 'active' : ''}`} onClick={() => setActiveTab('phases')}>DÃ©tail Phases</button>
+          <button className={`tab ${activeTab === 'phases' ? 'active' : ''}`} onClick={() => setActiveTab('phases')}>Detail Phases</button>
         </div>
 
-        {/* â•â•â• OVERVIEW TAB â•â•â• */}
+        {/* OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <>
             <div className="kpi-grid">
-              <div className="kpi-card"><div className="kpi-label">Statut</div><span className={`badge ${cohortStatus === 'En cours' ? 'badge-blue' : cohortStatus === 'TerminÃ©e' ? 'badge-green' : 'badge-gray'}`} style={{ fontSize: 14, padding: '6px 14px' }}>{cohortStatus}</span></div>
+              <div className="kpi-card"><div className="kpi-label">Statut</div><span className={`badge ${cohortStatus === 'En cours' ? 'badge-blue' : cohortStatus === 'Terminee' ? 'badge-green' : 'badge-gray'}`} style={{ fontSize: 14, padding: '6px 14px' }}>{cohortStatus}</span></div>
               <div className="kpi-card"><div className="kpi-label">Effectif total</div><div className="kpi-value">{learners.length}</div></div>
               <div className="kpi-card"><div className="kpi-label">En formation</div><div className="kpi-value" style={{ color: '#3b82f6' }}>{active}</div></div>
-              <div className="kpi-card"><div className="kpi-label">AbandonnÃ©s</div><div className="kpi-value" style={{ color: '#ef4444' }}>{dropped}</div></div>
-              <div className="kpi-card"><div className="kpi-label">InsÃ©rÃ©s</div><div className="kpi-value" style={{ color: '#22c55e' }}>{inserted}</div></div>
+              <div className="kpi-card"><div className="kpi-label">Abandonnes</div><div className="kpi-value" style={{ color: '#ef4444' }}>{dropped}</div></div>
+              <div className="kpi-card"><div className="kpi-label">Inseres</div><div className="kpi-value" style={{ color: '#22c55e' }}>{inserted}</div></div>
               <div className="kpi-card"><div className="kpi-label">Phases planning</div><div className="kpi-value">{phases.length}</div></div>
             </div>
 
             <div className="charts-grid">
               <div className="card">
-                <div className="card-header"><h3 className="card-title">RÃ©partition des statuts</h3></div>
+                <div className="card-header"><h3 className="card-title">Repartition des statuts</h3></div>
                 <div className="chart-container">
                   {statusData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
@@ -312,10 +312,10 @@ export default function CohortDetailPage() {
                   <span className="text-muted">Campus</span><span>{cohort.campus?.name || '-'}</span>
                   <span className="text-muted">Projet</span><span>{cohort.project?.name || '-'}</span>
                   <span className="text-muted">Formateur</span><span>{cohort.trainer ? `${cohort.trainer.firstName} ${cohort.trainer.lastName}` : '-'}</span>
-                  <span className="text-muted">CapacitÃ©</span><span>{cohort.capacity || '-'}</span>
-                  <span className="text-muted">DÃ©but</span><span>{cohort.startDate ? formatDate(cohort.startDate) : '-'}</span>
+                  <span className="text-muted">Capacite</span><span>{cohort.capacity || '-'}</span>
+                  <span className="text-muted">Debut</span><span>{cohort.startDate ? formatDate(cohort.startDate) : '-'}</span>
                   <span className="text-muted">Fin</span><span>{cohort.endDate ? formatDate(cohort.endDate) : '-'}</span>
-                  <span className="text-muted">DurÃ©e estimÃ©e</span>
+                  <span className="text-muted">Duree estimee</span>
                   <span>{cohort.startDate && cohort.endDate
                     ? `${Math.round((new Date(cohort.endDate).getTime() - new Date(cohort.startDate).getTime()) / (1000*60*60*24))} jours (~${Math.round((new Date(cohort.endDate).getTime() - new Date(cohort.startDate).getTime()) / (1000*60*60*24*30))} mois)`
                     : '-'}</span>
@@ -336,9 +336,17 @@ export default function CohortDetailPage() {
                         <td><span className={`badge ${l.statusCurrent === 'IN_TRAINING' ? 'badge-blue' : l.statusCurrent === 'DROPPED' ? 'badge-red' : l.statusCurrent === 'INSERTED' ? 'badge-green' : 'badge-gray'}`}>{STATUS_LABELS[l.statusCurrent] || l.statusCurrent}</span></td>
                         <td>{l.insertionType || '-'}</td>
                         <td>
-                          <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red-600)' }} onClick={(e) => handleUnassignLearner(l.id, `${l.firstName} ${l.lastName}`, e)}>
-                            Desassigner
-                          </button>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button className="btn btn-ghost btn-sm" onClick={(e) => { e.stopPropagation(); window.location.href = `/admin/learners/${l.id}`; }}>
+                              Voir
+                            </button>
+                            <button className="btn btn-ghost btn-sm" onClick={(e) => { e.stopPropagation(); window.location.href = `/admin/learners/${l.id}`; }}>
+                              Modifier
+                            </button>
+                            <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red-600)' }} onClick={(e) => handleUnassignLearner(l.id, `${l.firstName} ${l.lastName}`, e)}>
+                              Desassigner
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -349,13 +357,13 @@ export default function CohortDetailPage() {
           </>
         )}
 
-        {/* â•â•â• PLANNING TAB â•â•â• */}
+        {/* PLANNING TAB */}
         {activeTab === 'planning' && (
           <div className="card">
             <div className="card-header">
-              <h3 className="card-title">ðŸ“… Planning de la Formation</h3>
+              <h3 className="card-title">Planning de la Formation</h3>
               {cohort.startDate && cohort.endDate && (
-                <span className="text-xs text-muted">{formatDate(cohort.startDate)} â†’ {formatDate(cohort.endDate)}</span>
+                <span className="text-xs text-muted">{formatDate(cohort.startDate)} {'->'} {formatDate(cohort.endDate)}</span>
               )}
             </div>
             <div className="card-body" style={{ overflowX: 'auto' }}>
@@ -364,17 +372,17 @@ export default function CohortDetailPage() {
           </div>
         )}
 
-        {/* â•â•â• PHASES DETAIL TAB â•â•â• */}
+        {/* PHASES DETAIL TAB */}
         {activeTab === 'phases' && (
           <div className="card">
             <div className="card-header">
-              <h3 className="card-title">DÃ©tail des phases ({phases.length})</h3>
+              <h3 className="card-title">Detail des phases ({phases.length})</h3>
             </div>
             <div className="card-body">
               {phases.length === 0 ? (
                 <div className="empty-state">
                   <p className="empty-state-text">Aucune phase dans le planning.</p>
-                  <p className="text-sm text-muted mt-2">Le planning est automatiquement gÃ©nÃ©rÃ© lors de la crÃ©ation d&apos;une cohorte avec des dates.</p>
+                  <p className="text-sm text-muted mt-2">Le planning est automatiquement genere lors de la creation d&apos;une cohorte avec des dates.</p>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -390,7 +398,7 @@ export default function CohortDetailPage() {
                               <span className="badge badge-purple" style={{ fontSize: 10 }}>{PHASE_TYPE_LABELS[phase.phaseType] || phase.phaseType}</span>
                             </div>
                             <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                              {phase.startDate ? formatDate(phase.startDate) : '?'} â†’ {phase.endDate ? formatDate(phase.endDate) : '?'}
+                              {phase.startDate ? formatDate(phase.startDate) : '?'} {'->'} {phase.endDate ? formatDate(phase.endDate) : '?'}
                               {phase.startDate && phase.endDate && (
                                 <span style={{ marginLeft: 8, fontWeight: 500 }}>
                                   ({Math.round((new Date(phase.endDate).getTime() - new Date(phase.startDate).getTime()) / (1000*60*60*24))} jours)
@@ -410,13 +418,13 @@ export default function CohortDetailPage() {
                                 status: phase.status,
                               })}
                             >
-                              âœŽ Ã‰diter
+                              Editer
                             </button>
                           </div>
                         </div>
                         {phase.items?.length > 0 && (
                           <table className="data-table" style={{ margin: '0 16px 12px 32px' }}>
-                            <thead><tr><th>Ã‰lÃ©ment</th><th>Type</th><th>DÃ©but</th><th>Fin</th><th>Statut</th></tr></thead>
+                            <thead><tr><th>Element</th><th>Type</th><th>Debut</th><th>Fin</th><th>Statut</th></tr></thead>
                             <tbody>
                               {phase.items.map((item: any) => (
                                 <tr key={item.id}>
@@ -444,8 +452,8 @@ export default function CohortDetailPage() {
         <div className="modal-overlay" onClick={() => setEditingPhase(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 className="modal-title">Ã‰diter la phase</h2>
-              <button className="btn btn-ghost btn-icon" onClick={() => setEditingPhase(null)}>âœ•</button>
+              <h2 className="modal-title">Editer la phase</h2>
+              <button className="btn btn-ghost btn-icon" onClick={() => setEditingPhase(null)}>x</button>
             </div>
             <form onSubmit={handleUpdatePhase}>
               <div className="modal-body">
@@ -462,16 +470,16 @@ export default function CohortDetailPage() {
                   </select>
                 </div>
                 <div className="form-row">
-                  <div className="form-group"><label className="form-label">DÃ©but</label><input type="date" className="form-input" value={editingPhase.startDate} onChange={e => setEditingPhase({...editingPhase, startDate: e.target.value})} required /></div>
+                  <div className="form-group"><label className="form-label">Debut</label><input type="date" className="form-input" value={editingPhase.startDate} onChange={e => setEditingPhase({...editingPhase, startDate: e.target.value})} required /></div>
                   <div className="form-group"><label className="form-label">Fin</label><input type="date" className="form-input" value={editingPhase.endDate} onChange={e => setEditingPhase({...editingPhase, endDate: e.target.value})} required /></div>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Statut</label>
                   <select className="form-select" value={editingPhase.status} onChange={e => setEditingPhase({...editingPhase, status: e.target.value})}>
-                    <option value="PLANNED">PlanifiÃ©</option>
+                    <option value="PLANNED">Planifie</option>
                     <option value="IN_PROGRESS">En cours</option>
-                    <option value="DONE">TerminÃ©</option>
-                    <option value="CANCELLED">AnnulÃ©</option>
+                    <option value="DONE">Termine</option>
+                    <option value="CANCELLED">Annule</option>
                   </select>
                 </div>
               </div>
@@ -484,13 +492,13 @@ export default function CohortDetailPage() {
         </div>
       )}
 
-      {/* â•â•â• EDIT COHORT MODAL â•â•â• */}
+      {/* EDIT COHORT MODAL */}
       {editCohort && (
         <div className="modal-overlay" onClick={() => setEditCohort(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 className="modal-title">âœï¸ Modifier la cohorte</h2>
-              <button className="btn btn-ghost btn-icon" onClick={() => setEditCohort(null)}>âœ•</button>
+              <h2 className="modal-title">Modifier la cohorte</h2>
+              <button className="btn btn-ghost btn-icon" onClick={() => setEditCohort(null)}>x</button>
             </div>
             <form onSubmit={handleSaveCohort}>
               <div className="modal-body">
@@ -499,10 +507,11 @@ export default function CohortDetailPage() {
                   <input className="form-input" value={editCohort.name} onChange={e => setEditCohort({...editCohort, name: e.target.value})} required />
                 </div>
                 <div className="form-row">
-                  <div className="form-group"><label className="form-label">Date de dÃ©but</label><input type="date" className="form-input" value={editCohort.startDate} onChange={e => setEditCohort({...editCohort, startDate: e.target.value})} /></div>
+                  <div className="form-group"><label className="form-label">Date de debut</label><input type="date" className="form-input" value={editCohort.startDate} onChange={e => setEditCohort({...editCohort, startDate: e.target.value})} /></div>
                   <div className="form-group"><label className="form-label">Date de fin</label><input type="date" className="form-input" value={editCohort.endDate} onChange={e => setEditCohort({...editCohort, endDate: e.target.value})} /></div>
-                </div>                <div className="form-group">
-                  <label className="form-label">Projet assigné</label>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Projet assigne</label>
                   <select className="form-select" value={editCohort.projectId || ''} onChange={e => setEditCohort({ ...editCohort, projectId: e.target.value })}>
                     <option value="">Aucun projet</option>
                     {projects.map((p: any) => (
@@ -511,13 +520,13 @@ export default function CohortDetailPage() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">CapacitÃ©</label>
+                  <label className="form-label">Capacite</label>
                   <input type="number" className="form-input" value={editCohort.capacity} onChange={e => setEditCohort({...editCohort, capacity: e.target.value})} min={0} />
                 </div>
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setEditCohort(null)}>Annuler</button>
-                <button type="submit" className="btn btn-primary">ðŸ’¾ Enregistrer</button>
+                <button type="submit" className="btn btn-primary">Enregistrer</button>
               </div>
             </form>
           </div>

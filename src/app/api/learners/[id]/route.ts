@@ -79,6 +79,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   if (body.emergencyContact !== undefined) updateData.emergencyContact = body.emergencyContact || null;
   if (body.academicLevel !== undefined) updateData.academicLevel = body.academicLevel || null;
   if (body.academicField !== undefined) updateData.academicField = body.academicField || null;
+  if (body.cohortId !== undefined) updateData.cohortId = body.cohortId || null;
   if (body.insertionType !== undefined) updateData.insertionType = body.insertionType || null;
   if (body.insertionCompany !== undefined) updateData.insertionCompany = body.insertionCompany || null;
   if (body.insertionDate !== undefined) updateData.insertionDate = body.insertionDate ? new Date(body.insertionDate) : null;
