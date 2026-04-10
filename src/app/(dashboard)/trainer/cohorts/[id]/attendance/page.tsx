@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'JUSTIFIED_ABSENT' | 'LATE';
+type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'JUSTIFIED_ABSENT' | 'LATE' | 'NOT_APPLICABLE';
 
 interface RecordState {
   status: AttendanceStatus;
@@ -202,11 +202,8 @@ export default function AttendancePage() {
   if (loading) return <div className="page-body"><div className="loading-overlay"><span className="loading-spinner" /> Chargement...</div></div>;
 
   const activeLearners = cohort?.learnerProfiles?.filter((l: any) => l.statusCurrent === 'IN_TRAINING') || [];
-  const stats = {
-    present:   Object.values(records).filter(r => r.status === 'PRESENT').length,
-    absent:    Object.values(records).filter(r => r.status === 'ABSENT').length,
-    justified: Object.values(records).filter(r => r.status === 'JUSTIFIED_ABSENT').length,
     late:      Object.values(records).filter(r => r.status === 'LATE').length,
+    na:        Object.values(records).filter(r => r.status === 'NOT_APPLICABLE').length,
   };
 
   return (
@@ -241,6 +238,7 @@ export default function AttendancePage() {
             <span style={{ padding: '4px 12px', borderRadius: 20, background: '#fee2e2', color: '#dc2626', fontSize: 12, fontWeight: 700 }}>❌ {stats.absent} Absents</span>
             <span style={{ padding: '4px 12px', borderRadius: 20, background: '#dbeafe', color: '#1d4ed8', fontSize: 12, fontWeight: 700 }}>📋 {stats.justified} Justifiés</span>
             <span style={{ padding: '4px 12px', borderRadius: 20, background: '#fef9c3', color: '#92400e', fontSize: 12, fontWeight: 700 }}>⏰ {stats.late} Retards</span>
+            <span style={{ padding: '4px 12px', borderRadius: 20, background: '#f3f4f6', color: '#4b5563', fontSize: 12, fontWeight: 700 }}>⚪ {stats.na} N/A</span>
           </div>
         </div>
 
@@ -257,7 +255,7 @@ export default function AttendancePage() {
                 <div key={l.id} style={{
                   display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 20px',
                   borderBottom: idx < activeLearners.length - 1 ? '1px solid var(--border)' : 'none',
-                  background: rec.status === 'ABSENT' ? '#fff5f5' : rec.status === 'JUSTIFIED_ABSENT' ? '#eff6ff' : rec.status === 'LATE' ? '#fffbeb' : 'transparent',
+                  background: rec.status === 'ABSENT' ? '#fff5f5' : rec.status === 'JUSTIFIED_ABSENT' ? '#eff6ff' : rec.status === 'LATE' ? '#fffbeb' : rec.status === 'NOT_APPLICABLE' ? '#f9fafb' : 'transparent',
                   transition: 'background 0.2s',
                 }}>
                   {/* Avatar */}
@@ -269,7 +267,7 @@ export default function AttendancePage() {
                     <div style={{ fontWeight: 700, fontSize: 14 }}>{l.firstName} {l.lastName}</div>
                     {rec.status !== 'PRESENT' && (
                       <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                        {rec.status === 'ABSENT' ? '❌ Absent non justifié' : rec.status === 'JUSTIFIED_ABSENT' ? '📋 Absent justifié' : `⏰ Retard ${rec.lateMinutes} min`}
+                        {rec.status === 'ABSENT' ? '❌ Absent non justifié' : rec.status === 'JUSTIFIED_ABSENT' ? '📋 Absent justifié' : rec.status === 'NOT_APPLICABLE' ? '⚪ Non applicable (N/A)' : `⏰ Retard ${rec.lateMinutes} min`}
                       </div>
                     )}
                   </div>
@@ -280,6 +278,7 @@ export default function AttendancePage() {
                     <button className={`attendance-btn absent ${rec.status === 'ABSENT' ? 'selected' : ''}`} onClick={() => updateStatus(l.id, 'ABSENT')}>Absent</button>
                     <button className={`attendance-btn justified ${rec.status === 'JUSTIFIED_ABSENT' ? 'selected' : ''}`} onClick={() => updateStatus(l.id, 'JUSTIFIED_ABSENT')}>Justifié</button>
                     <button className={`attendance-btn late ${rec.status === 'LATE' ? 'selected' : ''}`} onClick={() => updateStatus(l.id, 'LATE')}>Retard</button>
+                    <button className={`attendance-btn ${rec.status === 'NOT_APPLICABLE' ? 'selected' : ''}`} style={{ background: rec.status === 'NOT_APPLICABLE' ? '#6b7280' : 'transparent', color: rec.status === 'NOT_APPLICABLE' ? 'white' : 'var(--text-secondary)', borderColor: 'var(--border)' }} onClick={() => updateStatus(l.id, 'NOT_APPLICABLE')}>N/A</button>
                     {rec.status === 'LATE' && (
                       <input type="number" className="form-input" style={{ width: 60, padding: '4px 6px', fontSize: 12 }}
                         value={rec.lateMinutes || 0} onChange={e => updateLateMinutes(l.id, parseInt(e.target.value) || 0)} placeholder="min" min={0} />

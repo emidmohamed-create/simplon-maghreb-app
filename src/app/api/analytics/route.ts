@@ -42,7 +42,7 @@ export async function GET(req: Request) {
     select: { status: true, lateMinutes: true },
   });
 
-  const totalRecords = allRecords.length;
+  const totalRecords = allRecords.filter(r => r.status !== 'NOT_APPLICABLE').length;
   const absences = allRecords.filter(r => r.status === 'ABSENT').length;
   const justified = allRecords.filter(r => r.status === 'JUSTIFIED_ABSENT').length;
   const lates = allRecords.filter(r => r.status === 'LATE').length;
@@ -110,7 +110,7 @@ export async function GET(req: Request) {
     const excluded = learners.filter(l => l.statusCurrent === 'EXCLUDED').length;
 
     const records = c.attendanceSessions.flatMap(s => s.records);
-    const totalR = records.length;
+    const totalR = records.filter(r => r.status !== 'NOT_APPLICABLE').length;
     const abs = records.filter(r => r.status === 'ABSENT' || r.status === 'JUSTIFIED_ABSENT').length;
     const late = records.filter(r => r.status === 'LATE').length;
     const lateMin = records.reduce((s, r) => s + (r.lateMinutes || 0), 0);
@@ -168,7 +168,7 @@ export async function GET(req: Request) {
   });
 
   const riskData = riskLearners.map(l => {
-    const totalR = l.attendanceRecords.length;
+    const totalR = l.attendanceRecords.filter(r => r.status !== 'NOT_APPLICABLE').length;
     const abs = l.attendanceRecords.filter(r => r.status === 'ABSENT' || r.status === 'JUSTIFIED_ABSENT').length;
     const lates = l.attendanceRecords.filter(r => r.status === 'LATE').length;
     const lateMin = l.attendanceRecords.reduce((s, r) => s + (r.lateMinutes || 0), 0);

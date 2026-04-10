@@ -96,6 +96,7 @@ export const STATUS_LABELS: Record<string, string> = {
   ABSENT: 'Absent',
   JUSTIFIED_ABSENT: 'Absent justifié',
   LATE: 'En retard',
+  NOT_APPLICABLE: 'N/A',
   PUBLISHED: 'Publié',
 };
 
