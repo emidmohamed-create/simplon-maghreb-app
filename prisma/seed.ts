@@ -189,7 +189,6 @@ async function main() {
   // ============================================================
   const progDevWeb = await prisma.program.create({
     data: {
-      campusId: campusCasa.id,
       projectId: project1.id,
       name: 'Développement Web FullStack',
       description: 'Formation intensive en développement web (React, Node.js, bases de données)',
@@ -198,7 +197,6 @@ async function main() {
 
   const progDevOps = await prisma.program.create({
     data: {
-      campusId: campusCasa.id,
       projectId: project2.id,
       name: 'DevOps & Cloud',
       description: 'DevOps, CI/CD, Docker, Kubernetes, Cloud Azure/AWS',
@@ -207,7 +205,6 @@ async function main() {
 
   const progDevWebAgadir = await prisma.program.create({
     data: {
-      campusId: campusAgadir.id,
       projectId: project1.id,
       name: 'Développement Web FullStack',
       description: 'Formation intensive en développement web (React, Node.js)',
@@ -216,7 +213,6 @@ async function main() {
 
   const progDataIA = await prisma.program.create({
     data: {
-      campusId: campusMarrakech.id,
       projectId: project3.id,
       name: 'Data & Intelligence Artificielle',
       description: 'Python, Machine Learning, Deep Learning, NLP',

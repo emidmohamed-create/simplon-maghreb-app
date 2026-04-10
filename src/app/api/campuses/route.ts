@@ -9,7 +9,7 @@ export async function GET() {
   const campuses = await prisma.campus.findMany({
     orderBy: { name: 'asc' },
     include: {
-      _count: { select: { programs: true, users: true } },
+      _count: { select: { cohorts: true, users: true } },
     },
   });
 

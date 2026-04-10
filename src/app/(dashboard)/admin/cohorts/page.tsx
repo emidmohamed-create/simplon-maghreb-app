@@ -56,7 +56,7 @@ export default function CohortsPage() {
                       <td style={{ fontWeight: 600 }}>{c.name}</td>
                       <td>{c.program.name}</td>
                       <td>{c.project ? <span className="badge badge-purple">{c.project.name}</span> : <span className="text-muted text-xs">Aucun</span>}</td>
-                      <td>{c.program.campus?.name}</td>
+                      <td>{c.campus?.name}</td>
                       <td>{c.trainer ? `${c.trainer.firstName} ${c.trainer.lastName}` : '-'}</td>
                       <td>{c.startDate ? formatDate(c.startDate) : '-'}</td>
                       <td>{c.endDate ? formatDate(c.endDate) : '-'}</td>

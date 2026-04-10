@@ -18,7 +18,8 @@ export async function GET(req: Request) {
     where,
     orderBy: { startDate: 'desc' },
     include: {
-      program: { select: { name: true, campus: { select: { id: true, name: true } } } },
+      program: { select: { name: true } },
+      campus: { select: { id: true, name: true } },
       project: { select: { name: true, code: true } },
       trainer: { select: { id: true, firstName: true, lastName: true } },
       _count: { select: { learnerProfiles: true } },

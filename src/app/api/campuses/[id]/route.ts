@@ -9,7 +9,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const campus = await prisma.campus.findUnique({
     where: { id: params.id },
     include: {
-      programs: { include: { _count: { select: { cohorts: true } } } },
       _count: { select: { users: true } },
     },
   });

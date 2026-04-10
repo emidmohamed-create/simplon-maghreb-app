@@ -17,7 +17,7 @@ export async function GET(req: Request) {
   if (cohortId) cohortWhere.id = cohortId;
   if (projectId) cohortWhere.projectId = projectId;
   if (programId) cohortWhere.programId = programId;
-  if (campusId) cohortWhere.program = { campusId };
+  if (campusId) cohortWhere.campusId = campusId;
 
   // Overview KPIs
   const learnerWhere: any = {};
@@ -60,7 +60,7 @@ export async function GET(req: Request) {
 
   // Status by program
   const programs = await prisma.program.findMany({
-    where: campusId ? { campusId } : undefined,
+    where: campusId ? { cohorts: { some: { campusId } } } : undefined,
     select: {
       id: true,
       name: true,
@@ -89,7 +89,8 @@ export async function GET(req: Request) {
   const cohortsData = await prisma.cohort.findMany({
     where: cohortWhere,
     include: {
-      program: { include: { campus: { select: { name: true } } } },
+      program: true,
+      campus: { select: { name: true } },
       project: { select: { name: true, code: true } },
       trainer: { select: { firstName: true, lastName: true } },
       learnerProfiles: { select: { statusCurrent: true } },
@@ -131,7 +132,7 @@ export async function GET(req: Request) {
     return {
       id: c.id,
       name: c.name,
-      campus: c.program.campus.name,
+      campus: c.campus?.name || '-',
       program: c.program.name,
       project: c.project?.name || '-',
       trainer: c.trainer ? `${c.trainer.firstName} ${c.trainer.lastName}` : '-',

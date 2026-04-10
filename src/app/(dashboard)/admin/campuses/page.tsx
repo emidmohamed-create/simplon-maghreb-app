@@ -87,13 +87,13 @@ export default function CampusesPage() {
         ) : (
           <div className="card">
             <table className="data-table">
-              <thead><tr><th>Nom</th><th>Ville</th><th>Programmes</th><th>Utilisateurs</th><th>Statut</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Nom</th><th>Ville</th><th>Promotions</th><th>Utilisateurs</th><th>Statut</th><th>Actions</th></tr></thead>
               <tbody>
                 {campuses.map(c => (
                   <tr key={c.id}>
                     <td style={{ fontWeight: 600 }}>{c.name}</td>
                     <td>{c.city}</td>
-                    <td>{c._count.programs}</td>
+                    <td>{c._count.cohorts}</td>
                     <td>{c._count.users}</td>
                     <td><span className={`badge ${c.isActive ? 'badge-green' : 'badge-gray'}`}>{c.isActive ? 'Actif' : 'Inactif'}</span></td>
                     <td>
