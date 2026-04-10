@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireAuth, STAFF_ROLES } from '@/lib/rbac';
+import { requireAuth, STAFF_ROLES, ADMIN_ROLES } from '@/lib/rbac';
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const { error } = await requireAuth(STAFF_ROLES);
@@ -141,4 +141,66 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   });
 
   return NextResponse.json(learner);
+}
+
+export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+  const { error } = await requireAuth(ADMIN_ROLES);
+  if (error) return error;
+
+  const { searchParams } = new URL(req.url);
+  const deleteUser = searchParams.get('deleteUser') === '1';
+
+  const learner = await prisma.learnerProfile.findUnique({
+    where: { id: params.id },
+    select: { id: true, userId: true },
+  });
+
+  if (!learner) {
+    return NextResponse.json({ error: 'Learner not found' }, { status: 404 });
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const justifications = await tx.absenceJustificationRequest.findMany({
+        where: { learnerProfileId: params.id },
+        select: { id: true },
+      });
+      const justificationIds = justifications.map((j) => j.id);
+
+      if (justificationIds.length > 0) {
+        await tx.justificationAttachment.deleteMany({
+          where: { justificationRequestId: { in: justificationIds } },
+        });
+      }
+
+      await tx.activityEvaluation.deleteMany({ where: { learnerProfileId: params.id } });
+      await tx.sprintEvaluation.deleteMany({ where: { learnerProfileId: params.id } });
+      await tx.filRougeSubmission.deleteMany({ where: { learnerProfileId: params.id } });
+      await tx.juryBlancEvaluation.deleteMany({ where: { learnerProfileId: params.id } });
+      await tx.juryBlancLearnerRecord.deleteMany({ where: { learnerProfileId: params.id } });
+      await tx.insertionFollowUp.deleteMany({ where: { learnerProfileId: params.id } });
+      await tx.pRPECase.deleteMany({ where: { learnerProfileId: params.id } });
+      await tx.learnerMeeting.deleteMany({ where: { learnerProfileId: params.id } });
+      await tx.attendanceRecord.deleteMany({ where: { learnerProfileId: params.id } });
+      await tx.document.deleteMany({ where: { learnerProfileId: params.id } });
+      await tx.absenceJustificationRequest.deleteMany({ where: { learnerProfileId: params.id } });
+      await tx.activityAssignment.deleteMany({ where: { learnerProfileId: params.id } });
+      await tx.learnerStatusHistory.deleteMany({ where: { learnerProfileId: params.id } });
+      await tx.learnerProfile.delete({ where: { id: params.id } });
+
+      if (deleteUser && learner.userId) {
+        const remainingProfiles = await tx.learnerProfile.count({ where: { userId: learner.userId } });
+        if (remainingProfiles === 0) {
+          await tx.user.delete({ where: { id: learner.userId } });
+        }
+      }
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: err?.message || 'Unable to delete learner profile. Check linked data.' },
+      { status: 500 },
+    );
+  }
 }

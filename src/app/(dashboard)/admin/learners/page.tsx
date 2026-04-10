@@ -101,6 +101,18 @@ export default function LearnersPage() {
     }
   };
 
+  const handleDeleteLearner = async (learnerId: string, learnerName: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm(`Supprimer le profil apprenant de ${learnerName} ?`)) return;
+    const res = await fetch(`/api/learners/${learnerId}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || 'Erreur lors de la suppression');
+      return;
+    }
+    loadLearners();
+  };
+
   return (
     <>
       <div className="page-header">
@@ -161,6 +173,7 @@ export default function LearnersPage() {
                   <th>Campus</th>
                   <th>Statut</th>
                   <th>Insertion</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -177,6 +190,11 @@ export default function LearnersPage() {
                       </span>
                     </td>
                     <td>{l.insertionType ? INSERTION_LABELS[l.insertionType] || l.insertionType : '-'}</td>
+                    <td>
+                      <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red-600)' }} onClick={(e) => handleDeleteLearner(l.id, `${l.firstName} ${l.lastName}`, e)}>
+                        Supprimer
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

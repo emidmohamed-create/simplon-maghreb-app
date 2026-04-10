@@ -9,6 +9,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const cohort = await prisma.cohort.findUnique({
     where: { id: params.id },
     include: {
+      campus: { select: { id: true, name: true } },
       program: true,
       project: {
         select: {
@@ -43,6 +44,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   try {
     const body = await req.json();
     const { name, startDate, endDate, trainerId, capacity, projectId } = body;
+    const shouldUpdateProject = Object.prototype.hasOwnProperty.call(body, 'projectId');
 
     const updated = await prisma.cohort.update({
       where: { id: params.id },
@@ -52,7 +54,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
         endDate: endDate ? new Date(endDate) : null,
         trainerId: trainerId || null,
         capacity: capacity ? parseInt(capacity) : null,
-        projectId: projectId || undefined,
+        projectId: shouldUpdateProject ? (projectId || null) : undefined,
       },
     });
 
