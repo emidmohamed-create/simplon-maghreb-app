@@ -38,7 +38,7 @@ export async function GET(req: Request) {
       cohort: {
         select: {
           name: true,
-          program: { select: { name: true, campus: { select: { id: true, name: true } } } },
+          program: { select: { name: true } },
         },
       },
     },

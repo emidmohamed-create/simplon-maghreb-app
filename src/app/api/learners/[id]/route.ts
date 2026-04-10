@@ -11,7 +11,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     include: {
       cohort: {
         include: {
-          program: { include: { campus: true } },
+          program: true,
           project: true,
           trainer: { select: { firstName: true, lastName: true } },
           filRougeProject: {

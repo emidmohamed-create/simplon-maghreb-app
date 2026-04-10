@@ -10,10 +10,10 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     where: { id: params.id },
     include: {
       partner: true,
-      programs: { include: { campus: { select: { name: true } } } },
+      programs: true,
       cohorts: {
         include: {
-          program: { select: { name: true, campus: { select: { name: true } } } },
+          program: { select: { name: true } },
           trainer: { select: { firstName: true, lastName: true } },
           _count: { select: { learnerProfiles: true } },
         },

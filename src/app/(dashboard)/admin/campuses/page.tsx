@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-interface Campus { id: string; name: string; city: string; isActive: boolean; _count: { programs: number; users: number } }
+interface Campus { id: string; name: string; city: string; isActive: boolean; _count: { cohorts: number; users: number } }
 
 export default function CampusesPage() {
   const [campuses, setCampuses] = useState<Campus[]>([]);

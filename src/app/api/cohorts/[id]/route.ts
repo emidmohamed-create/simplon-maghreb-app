@@ -9,7 +9,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const cohort = await prisma.cohort.findUnique({
     where: { id: params.id },
     include: {
-      program: { include: { campus: { select: { name: true } } } },
+      program: true,
       project: {
         select: {
           id: true,
