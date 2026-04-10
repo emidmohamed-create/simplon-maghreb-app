@@ -60,6 +60,9 @@ export default function LearnerDetailPage() {
   // Modals
   const [statusModal,    setStatusModal]    = useState(false);
   const [insertionModal, setInsertionModal] = useState(false);
+  const [profileModal,   setProfileModal]   = useState(false);
+  const [savingProfile,  setSavingProfile]  = useState(false);
+  const [profileForm,    setProfileForm]    = useState<any>(null);
   const [newStatus,      setNewStatus]      = useState('');
   const [statusComment,  setStatusComment]  = useState('');
   const [insertion, setInsertion] = useState({ type: '', company: '', date: '' });
@@ -87,6 +90,22 @@ export default function LearnerDetailPage() {
   }, [params.id]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (!learner) return;
+    setProfileForm({
+      firstName: learner.firstName || '',
+      lastName: learner.lastName || '',
+      email: learner.email || '',
+      phone: learner.phone || '',
+      cin: learner.cin || '',
+      birthdate: learner.birthdate ? new Date(learner.birthdate).toISOString().split('T')[0] : '',
+      gender: learner.gender || '',
+      emergencyContact: learner.emergencyContact || '',
+      academicLevel: learner.academicLevel || '',
+      academicField: learner.academicField || '',
+    });
+  }, [learner]);
 
   // ─── Justification handlers ────────────────────────────────────────────────
   const handleCreateJust = async (e: React.FormEvent) => {
@@ -200,6 +219,28 @@ export default function LearnerDetailPage() {
     setInsertionModal(false); load();
   };
 
+  const handleProfileSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profileForm) return;
+    setSavingProfile(true);
+    try {
+      const res = await fetch(`/api/learners/${params.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profileForm),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Erreur lors de la mise a jour du profil');
+        return;
+      }
+      setProfileModal(false);
+      load();
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
   if (loading) return <div className="page-body"><div className="loading-overlay"><span className="loading-spinner" /> Chargement...</div></div>;
   if (!learner) return <div className="page-body"><div className="empty-state"><p>Apprenant non trouvé</p></div></div>;
 
@@ -243,7 +284,7 @@ export default function LearnerDetailPage() {
             <Link href="/admin/learners">Apprenants</Link> / <span>{learner.firstName} {learner.lastName}</span>
           </div>
           <h1 className="page-title">{learner.firstName} {learner.lastName}</h1>
-          <p className="page-subtitle">{learner.cohort?.name} — {learner.cohort?.program?.name} — {learner.cohort?.program?.campus?.name}</p>
+          <p className="page-subtitle">{learner.cohort?.name} — {learner.cohort?.program?.name} — {learner.cohort?.campus?.name}</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="btn btn-secondary" onClick={() => setStatusModal(true)}>🔄 Changer statut</button>
@@ -859,7 +900,11 @@ export default function LearnerDetailPage() {
 
         {/* ══════════════ TAB: PROFILE ══════════════ */}
         {activeTab === 'profile' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+              <button className="btn btn-primary" onClick={() => setProfileModal(true)}>Modifier profil</button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
             <div className="card">
               <div className="card-header"><h3 className="card-title">👤 Informations personnelles</h3></div>
               <div className="card-body">
@@ -883,7 +928,7 @@ export default function LearnerDetailPage() {
                   <span className="text-muted">Filière</span><span>{learner.academicField || '—'}</span>
                   <span className="text-muted">Cohorte</span><span>{learner.cohort?.name}</span>
                   <span className="text-muted">Programme</span><span>{learner.cohort?.program?.name}</span>
-                  <span className="text-muted">Campus</span><span>{learner.cohort?.program?.campus?.name}</span>
+                  <span className="text-muted">Campus</span><span>{learner.cohort?.campus?.name || '—'}</span>
                   <span className="text-muted">Formateur</span><span>{learner.cohort?.trainer ? `${learner.cohort.trainer.firstName} ${learner.cohort.trainer.lastName}` : '—'}</span>
                   <span className="text-muted">Début formation</span><span>{learner.cohort?.startDate ? formatDate(learner.cohort.startDate) : '—'}</span>
                   <span className="text-muted">Fin formation</span><span>{learner.cohort?.endDate ? formatDate(learner.cohort.endDate) : '—'}</span>
@@ -911,8 +956,85 @@ export default function LearnerDetailPage() {
               </table>
             </div>
           </div>
+          </div>
         )}
       </div>
+
+      {/* ═══ PROFILE MODAL ═══ */}
+      {profileModal && profileForm && (
+        <div className="modal-overlay" onClick={() => setProfileModal(false)}>
+          <div className="modal" style={{ maxWidth: 760 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">Modifier le profil apprenant</h2>
+              <button className="btn btn-ghost btn-icon" onClick={() => setProfileModal(false)}>✕</button>
+            </div>
+            <form onSubmit={handleProfileSave}>
+              <div className="modal-body">
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Prenom</label>
+                    <input className="form-input" value={profileForm.firstName} onChange={e => setProfileForm({ ...profileForm, firstName: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Nom</label>
+                    <input className="form-input" value={profileForm.lastName} onChange={e => setProfileForm({ ...profileForm, lastName: e.target.value })} />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Email</label>
+                    <input type="email" className="form-input" value={profileForm.email} onChange={e => setProfileForm({ ...profileForm, email: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Telephone</label>
+                    <input className="form-input" value={profileForm.phone} onChange={e => setProfileForm({ ...profileForm, phone: e.target.value })} />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">CIN</label>
+                    <input className="form-input" value={profileForm.cin} onChange={e => setProfileForm({ ...profileForm, cin: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Date de naissance</label>
+                    <input type="date" className="form-input" value={profileForm.birthdate} onChange={e => setProfileForm({ ...profileForm, birthdate: e.target.value })} />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Genre</label>
+                    <select className="form-select" value={profileForm.gender} onChange={e => setProfileForm({ ...profileForm, gender: e.target.value })}>
+                      <option value="">Non precise</option>
+                      <option value="MALE">Homme</option>
+                      <option value="FEMALE">Femme</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Contact urgence</label>
+                    <input className="form-input" value={profileForm.emergencyContact} onChange={e => setProfileForm({ ...profileForm, emergencyContact: e.target.value })} />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Niveau academique</label>
+                    <input className="form-input" value={profileForm.academicLevel} onChange={e => setProfileForm({ ...profileForm, academicLevel: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Filiere</label>
+                    <input className="form-input" value={profileForm.academicField} onChange={e => setProfileForm({ ...profileForm, academicField: e.target.value })} />
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setProfileModal(false)}>Annuler</button>
+                <button type="submit" className="btn btn-primary" disabled={savingProfile}>
+                  {savingProfile ? 'Enregistrement...' : 'Enregistrer'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ═══ STATUS MODAL ═══ */}
       {statusModal && (

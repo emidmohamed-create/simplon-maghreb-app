@@ -22,13 +22,12 @@ export async function GET(req: Request) {
     ];
   }
 
-  // If trainer, only show their cohorts
   if (user!.role === 'TRAINER') {
     const trainerCohorts = await prisma.cohort.findMany({
       where: { trainerId: user!.id },
       select: { id: true },
     });
-    where.cohortId = { in: trainerCohorts.map(c => c.id) };
+    where.cohortId = { in: trainerCohorts.map((c) => c.id) };
   }
 
   const learners = await prisma.learnerProfile.findMany({
@@ -38,6 +37,7 @@ export async function GET(req: Request) {
       cohort: {
         select: {
           name: true,
+          campus: { select: { id: true, name: true } },
           program: { select: { name: true } },
         },
       },
@@ -53,60 +53,111 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { userId, cohortId } = body;
+    const {
+      userId,
+      cohortId,
+      firstName,
+      lastName,
+      email,
+      phone,
+      cin,
+      birthdate,
+      gender,
+      emergencyContact,
+      academicLevel,
+      academicField,
+    } = body;
 
     if (!userId || !cohortId) {
-      return NextResponse.json({ error: 'userId et cohortId sont requis' }, { status: 400 });
+      return NextResponse.json({ error: 'userId and cohortId are required' }, { status: 400 });
     }
 
-    // Vérifier l'utilisateur
     const userToAssign = await prisma.user.findUnique({ where: { id: userId } });
     if (!userToAssign) {
-      return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 });
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Vérifier la cohorte
     const cohort = await prisma.cohort.findUnique({ where: { id: cohortId } });
     if (!cohort) {
-      return NextResponse.json({ error: 'Cohorte introuvable' }, { status: 404 });
+      return NextResponse.json({ error: 'Cohort not found' }, { status: 404 });
     }
 
-    // Vérifier si le LearnerProfile existe déjà pour cette cohorte et cet utilisateur
-    const existing = await prisma.learnerProfile.findFirst({
-      where: { userId, cohortId }
-    });
-    
+    const existing = await prisma.learnerProfile.findFirst({ where: { userId, cohortId } });
     if (existing) {
-      return NextResponse.json({ error: 'Cet utilisateur est déjà dans cette cohorte' }, { status: 400 });
+      return NextResponse.json({ error: 'This user is already assigned to this cohort' }, { status: 400 });
     }
 
-    // Créer le LearnerProfile
-    const learner = await prisma.learnerProfile.create({
-      data: {
-        userId: userToAssign.id,
-        cohortId,
-        firstName: userToAssign.firstName,
-        lastName: userToAssign.lastName,
-        email: userToAssign.email,
-        statusCurrent: 'IN_TRAINING',
-      }
+    const normalizedEmail = (email || userToAssign.email).trim().toLowerCase();
+    const inferredCandidate = await prisma.candidate.findFirst({
+      where: { email: normalizedEmail },
+      orderBy: { createdAt: 'desc' },
     });
 
-    // Créer le premier historique de statut
-    await prisma.learnerStatusHistory.create({
-      data: {
-        learnerProfileId: learner.id,
-        fromStatus: null,
-        toStatus: 'IN_TRAINING',
-        effectiveDate: new Date(),
-        comment: 'Inscription initiale dans la formation',
-        changedById: authUser!.id,
+    const learner = await prisma.$transaction(async (tx) => {
+      const created = await tx.learnerProfile.create({
+        data: {
+          userId: userToAssign.id,
+          candidateId: inferredCandidate?.id || null,
+          cohortId,
+          firstName: firstName?.trim() || userToAssign.firstName,
+          lastName: lastName?.trim() || userToAssign.lastName,
+          email: normalizedEmail,
+          phone: phone ?? inferredCandidate?.phone ?? null,
+          cin: cin ?? inferredCandidate?.cin ?? null,
+          birthdate: birthdate ? new Date(birthdate) : inferredCandidate?.birthdate ?? null,
+          gender: gender ?? inferredCandidate?.gender ?? null,
+          emergencyContact: emergencyContact ?? null,
+          academicLevel: academicLevel ?? inferredCandidate?.academicLevel ?? null,
+          academicField: academicField ?? inferredCandidate?.academicField ?? null,
+          statusCurrent: 'IN_TRAINING',
+        },
+      });
+
+      await tx.learnerStatusHistory.create({
+        data: {
+          learnerProfileId: created.id,
+          fromStatus: null,
+          toStatus: 'IN_TRAINING',
+          effectiveDate: new Date(),
+          comment: 'Initial assignment to cohort',
+          changedById: authUser!.id,
+        },
+      });
+
+      await tx.user.update({
+        where: { id: userToAssign.id },
+        data: {
+          firstName: created.firstName,
+          lastName: created.lastName,
+          email: created.email,
+          role: 'LEARNER',
+        },
+      });
+
+      if (inferredCandidate) {
+        await tx.candidate.update({
+          where: { id: inferredCandidate.id },
+          data: {
+            firstName: created.firstName,
+            lastName: created.lastName,
+            email: created.email,
+            phone: created.phone,
+            cin: created.cin,
+            birthdate: created.birthdate,
+            gender: created.gender,
+            academicLevel: created.academicLevel,
+            academicField: created.academicField,
+            currentStage: 'CONVERTED',
+          },
+        });
       }
+
+      return created;
     });
 
     return NextResponse.json(learner, { status: 201 });
   } catch (err: any) {
     console.error(err);
-    return NextResponse.json({ error: "Erreur lors de l'assignation" }, { status: 500 });
+    return NextResponse.json({ error: "Error while assigning learner" }, { status: 500 });
   }
 }
