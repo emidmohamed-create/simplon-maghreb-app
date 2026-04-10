@@ -202,6 +202,10 @@ export default function AttendancePage() {
   if (loading) return <div className="page-body"><div className="loading-overlay"><span className="loading-spinner" /> Chargement...</div></div>;
 
   const activeLearners = cohort?.learnerProfiles?.filter((l: any) => l.statusCurrent === 'IN_TRAINING') || [];
+  const stats = {
+    present:   Object.values(records).filter(r => r.status === 'PRESENT').length,
+    absent:    Object.values(records).filter(r => r.status === 'ABSENT').length,
+    justified: Object.values(records).filter(r => r.status === 'JUSTIFIED_ABSENT').length,
     late:      Object.values(records).filter(r => r.status === 'LATE').length,
     na:        Object.values(records).filter(r => r.status === 'NOT_APPLICABLE').length,
   };
