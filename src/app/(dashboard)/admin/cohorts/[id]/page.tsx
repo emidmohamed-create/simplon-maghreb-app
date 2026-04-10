@@ -36,6 +36,8 @@ export default function CohortDetailPage() {
   const [editingPhase, setEditingPhase] = useState<any>(null);
   const [editCohort, setEditCohort] = useState<any>(null);
   const [generating, setGenerating] = useState(false);
+  const [absenceAnalytics, setAbsenceAnalytics] = useState<any>(null);
+  const [loadingAbsenceAnalytics, setLoadingAbsenceAnalytics] = useState(false);
 
   const handleSaveCohort = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,7 +100,23 @@ export default function CohortDetailPage() {
     }).finally(() => setLoading(false));
   }, [params.id]);
 
+  const loadAbsenceAnalytics = useCallback(async () => {
+    setLoadingAbsenceAnalytics(true);
+    try {
+      const res = await fetch(`/api/cohorts/${params.id}/absence-analytics`);
+      const data = await res.json();
+      setAbsenceAnalytics(data);
+    } finally {
+      setLoadingAbsenceAnalytics(false);
+    }
+  }, [params.id]);
+
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (activeTab === 'absences' && !absenceAnalytics && !loadingAbsenceAnalytics) {
+      loadAbsenceAnalytics();
+    }
+  }, [activeTab, absenceAnalytics, loadingAbsenceAnalytics, loadAbsenceAnalytics]);
 
   if (loading) return <div className="page-body"><div className="loading-overlay"><span className="loading-spinner" /> Chargement...</div></div>;
   if (!cohort) return <div className="page-body"><div className="empty-state"><p>Cohorte non trouvee</p></div></div>;
@@ -274,6 +292,7 @@ export default function CohortDetailPage() {
             {phases.length > 0 && <span className="badge badge-blue" style={{ marginLeft: 6, fontSize: 10 }}>{phases.length} phases</span>}
           </button>
           <button className={`tab ${activeTab === 'phases' ? 'active' : ''}`} onClick={() => setActiveTab('phases')}>Detail Phases</button>
+          <button className={`tab ${activeTab === 'absences' ? 'active' : ''}`} onClick={() => setActiveTab('absences')}>Analyse Absences</button>
         </div>
 
         {/* OVERVIEW TAB */}
@@ -354,6 +373,134 @@ export default function CohortDetailPage() {
                 </table>
               ) : <div className="card-body"><p className="text-muted">Aucun apprenant inscrit</p></div>}
             </div>
+          </>
+        )}
+
+        {/* ABSENCE ANALYTICS TAB */}
+        {activeTab === 'absences' && (
+          <>
+            {loadingAbsenceAnalytics && (
+              <div className="card">
+                <div className="card-body">Chargement analyse absences...</div>
+              </div>
+            )}
+
+            {!loadingAbsenceAnalytics && absenceAnalytics?.summary && (
+              <>
+                <div className="kpi-grid">
+                  <div className="kpi-card">
+                    <div className="kpi-label">Taux absence</div>
+                    <div className="kpi-value" style={{ color: absenceAnalytics.summary.absenceRate >= 20 ? '#ef4444' : absenceAnalytics.summary.absenceRate >= 10 ? '#f59e0b' : '#22c55e' }}>
+                      {absenceAnalytics.summary.absenceRate}%
+                    </div>
+                  </div>
+                  <div className="kpi-card">
+                    <div className="kpi-label">Non justifie</div>
+                    <div className="kpi-value" style={{ color: absenceAnalytics.summary.unjustifiedRate >= 10 ? '#ef4444' : '#f59e0b' }}>
+                      {absenceAnalytics.summary.unjustifiedRate}%
+                    </div>
+                  </div>
+                  <div className="kpi-card">
+                    <div className="kpi-label">Retards</div>
+                    <div className="kpi-value">{absenceAnalytics.summary.lateRate}%</div>
+                  </div>
+                  <div className="kpi-card">
+                    <div className="kpi-label">N/A</div>
+                    <div className="kpi-value">{absenceAnalytics.summary.naRate}%</div>
+                  </div>
+                  <div className="kpi-card">
+                    <div className="kpi-label">Sessions</div>
+                    <div className="kpi-value">{absenceAnalytics.summary.sessions}</div>
+                  </div>
+                  <div className="kpi-card">
+                    <div className="kpi-label">Pointages comptes</div>
+                    <div className="kpi-value">{absenceAnalytics.summary.countedRecords}</div>
+                  </div>
+                </div>
+
+                <div className="charts-grid">
+                  <div className="card">
+                    <div className="card-header">
+                      <h3 className="card-title">Alertes ({absenceAnalytics.alerts?.length || 0})</h3>
+                    </div>
+                    <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {(absenceAnalytics.alerts || []).length === 0 && (
+                        <p className="text-muted">Aucune alerte pour le moment.</p>
+                      )}
+                      {(absenceAnalytics.alerts || []).slice(0, 12).map((a: any, idx: number) => (
+                        <div key={`${a.title}-${idx}`} style={{ border: '1px solid var(--border)', borderLeft: `4px solid ${a.level === 'high' ? '#ef4444' : '#f59e0b'}`, borderRadius: 8, padding: '10px 12px', background: a.level === 'high' ? '#fef2f2' : '#fffbeb' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                            <strong style={{ fontSize: 13 }}>{a.title}</strong>
+                            <span className={`badge ${a.level === 'high' ? 'badge-red' : 'badge-orange'}`}>{a.level === 'high' ? 'Haute' : 'Moyenne'}</span>
+                          </div>
+                          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>{a.detail}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="card">
+                    <div className="card-header">
+                      <h3 className="card-title">Tendance hebdomadaire</h3>
+                    </div>
+                    <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {(absenceAnalytics.weeklyTrend || []).length === 0 && (
+                        <p className="text-muted">Pas assez de donnees de presence.</p>
+                      )}
+                      {(absenceAnalytics.weeklyTrend || []).map((w: any) => (
+                        <div key={w.key} style={{ display: 'grid', gridTemplateColumns: '80px 1fr 56px', alignItems: 'center', gap: 10 }}>
+                          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{w.key}</span>
+                          <div style={{ height: 10, borderRadius: 999, background: '#e5e7eb', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${Math.min(100, w.absenceRate)}%`, background: w.absenceRate >= 20 ? '#ef4444' : w.absenceRate >= 10 ? '#f59e0b' : '#22c55e' }} />
+                          </div>
+                          <strong style={{ fontSize: 12 }}>{w.absenceRate}%</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="card">
+                  <div className="card-header">
+                    <h3 className="card-title">Top apprenants a risque</h3>
+                  </div>
+                  <div className="card-body" style={{ padding: 0 }}>
+                    {(absenceAnalytics.topRiskLearners || []).length === 0 ? (
+                      <div className="card-body"><p className="text-muted">Aucun risque detecte.</p></div>
+                    ) : (
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Apprenant</th>
+                            <th>Taux absence</th>
+                            <th>Non justifie</th>
+                            <th>Absences consecutives</th>
+                            <th>Retards</th>
+                            <th>Risque</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(absenceAnalytics.topRiskLearners || []).map((l: any) => (
+                            <tr key={l.learnerId} className="clickable" onClick={() => window.location.href = `/admin/learners/${l.learnerId}`}>
+                              <td style={{ fontWeight: 600 }}>{l.name}</td>
+                              <td>{l.absenceRate}%</td>
+                              <td>{l.unjustifiedRate}%</td>
+                              <td>{l.consecutiveAbsences}</td>
+                              <td>{l.late} ({l.lateMinutes} min)</td>
+                              <td>
+                                <span className={`badge ${l.risk === 'high' ? 'badge-red' : l.risk === 'medium' ? 'badge-orange' : 'badge-green'}`}>
+                                  {l.risk === 'high' ? 'Eleve' : l.risk === 'medium' ? 'Moyen' : 'Faible'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </>
         )}
 

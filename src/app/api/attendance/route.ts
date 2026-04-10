@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, STAFF_ROLES } from '@/lib/rbac';
 
@@ -43,7 +43,13 @@ export async function POST(req: Request) {
   const { cohortId, date, halfDay, records } = body;
 
   if (!cohortId || !date || !halfDay || !records?.length) {
-    return NextResponse.json({ error: 'Données incomplètes' }, { status: 400 });
+    return NextResponse.json({ error: 'DonnÃ©es incomplÃ¨tes' }, { status: 400 });
+  }
+
+  const allowedStatuses = new Set(['PRESENT', 'ABSENT', 'JUSTIFIED_ABSENT', 'LATE', 'NOT_APPLICABLE']);
+  const hasInvalidStatus = records.some((record: any) => !allowedStatuses.has(record?.status));
+  if (hasInvalidStatus) {
+    return NextResponse.json({ error: 'Statut de présence invalide' }, { status: 400 });
   }
 
   // Upsert session

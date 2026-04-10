@@ -1,4 +1,4 @@
-import { format, differenceInCalendarDays, isWeekend, eachDayOfInterval, startOfWeek, endOfWeek, parseISO } from 'date-fns';
+﻿import { format, differenceInCalendarDays, isWeekend, eachDayOfInterval, startOfWeek, endOfWeek, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 export const TIMEZONE = 'Africa/Casablanca';
@@ -72,29 +72,29 @@ export function truncate(str: string, maxLength: number): string {
 
 export const STATUS_LABELS: Record<string, string> = {
   IN_TRAINING: 'En formation',
-  DROPPED: 'Abandonné',
-  INSERTED: 'Inséré',
+  DROPPED: 'AbandonnÃ©',
+  INSERTED: 'InsÃ©rÃ©',
   EXCLUDED: 'Exclu',
   DRAFT: 'Brouillon',
   ACTIVE: 'Actif',
-  COMPLETED: 'Terminé',
-  ARCHIVED: 'Archivé',
-  PLANNED: 'Planifié',
+  COMPLETED: 'TerminÃ©',
+  ARCHIVED: 'ArchivÃ©',
+  PLANNED: 'PlanifiÃ©',
   IN_PROGRESS: 'En cours',
-  DONE: 'Terminé',
-  CANCELLED: 'Annulé',
-  POSTPONED: 'Reporté',
+  DONE: 'TerminÃ©',
+  CANCELLED: 'AnnulÃ©',
+  POSTPONED: 'ReportÃ©',
   PENDING: 'En attente',
-  APPROVED: 'Approuvé',
-  REJECTED: 'Refusé',
+  APPROVED: 'ApprouvÃ©',
+  REJECTED: 'RefusÃ©',
   NEW: 'Nouveau',
-  CONTACTED: 'Contacté',
-  EVALUATED: 'Évalué',
-  QUALIFIED: 'Qualifié',
+  CONTACTED: 'ContactÃ©',
+  EVALUATED: 'Ã‰valuÃ©',
+  QUALIFIED: 'QualifiÃ©',
   CONVERTED: 'Converti',
-  PRESENT: 'Présent',
+  PRESENT: 'PrÃ©sent',
   ABSENT: 'Absent',
-  JUSTIFIED_ABSENT: 'Absent justifié',
+  JUSTIFIED_ABSENT: 'Absent justifiÃ©',
   LATE: 'En retard',
   NOT_APPLICABLE: 'N/A',
   PUBLISHED: 'Publié',
@@ -105,18 +105,18 @@ export const INSERTION_LABELS: Record<string, string> = {
   CDI: 'CDI',
   CDD: 'CDD',
   FREELANCE: 'Freelance',
-  FURTHER_STUDIES: 'Poursuite d\'études',
+  FURTHER_STUDIES: 'Poursuite d\'Ã©tudes',
 };
 
 export const PHASE_TYPE_LABELS: Record<string, string> = {
   COMMUNICATION: 'Communication',
   SOURCING: 'Sourcing',
-  SELECTION: 'Sélection',
+  SELECTION: 'SÃ©lection',
   WARMUP: 'Warm-up',
   TRAINING: 'Formation',
   WORKSHOP: 'Atelier',
   FIL_ROUGE: 'Projet fil rouge',
-  EVALUATION: 'Évaluation',
+  EVALUATION: 'Ã‰valuation',
   CERTIFICATION: 'Certification',
   RATTRAPAGE: 'Rattrapage',
   INSERTION: 'Insertion',
@@ -124,10 +124,10 @@ export const PHASE_TYPE_LABELS: Record<string, string> = {
 };
 
 export const ITEM_TYPE_LABELS: Record<string, string> = {
-  ACTIVITY: 'Activité',
+  ACTIVITY: 'ActivitÃ©',
   WORKSHOP: 'Atelier',
   MILESTONE: 'Jalon',
-  EVENT: 'Événement',
+  EVENT: 'Ã‰vÃ©nement',
   REVIEW_POINT: 'Point de suivi',
   DEADLINE: 'Date limite',
 };
@@ -135,13 +135,13 @@ export const ITEM_TYPE_LABELS: Record<string, string> = {
 export const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: 'Super Admin',
   ADMIN_CAMPUS: 'Admin Campus',
-  PROJECT_MANAGER: 'Chargé de projet',
+  PROJECT_MANAGER: 'ChargÃ© de projet',
   TRAINER: 'Formateur',
   LEARNER: 'Apprenant',
 };
 
 export const PROJECT_TYPE_LABELS: Record<string, string> = {
   OWN: 'Projet propre',
-  FUNDED: 'Projet financé',
+  FUNDED: 'Projet financÃ©',
   PARTNERSHIP: 'Partenariat',
 };
