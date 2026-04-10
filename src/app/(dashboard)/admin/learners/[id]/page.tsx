@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { STATUS_LABELS, INSERTION_LABELS, formatDate } from '@/lib/utils';
+import { ACADEMIC_FIELD_OPTIONS, ACADEMIC_LEVEL_OPTIONS } from '@/lib/academic-options';
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip } from 'recharts';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -1017,11 +1018,21 @@ export default function LearnerDetailPage() {
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">Niveau academique</label>
-                    <input className="form-input" value={profileForm.academicLevel} onChange={e => setProfileForm({ ...profileForm, academicLevel: e.target.value })} />
+                    <select className="form-select" value={profileForm.academicLevel} onChange={e => setProfileForm({ ...profileForm, academicLevel: e.target.value })}>
+                      <option value="">Selectionner...</option>
+                      {ACADEMIC_LEVEL_OPTIONS.map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="form-group">
                     <label className="form-label">Filiere</label>
-                    <input className="form-input" value={profileForm.academicField} onChange={e => setProfileForm({ ...profileForm, academicField: e.target.value })} />
+                    <select className="form-select" value={profileForm.academicField} onChange={e => setProfileForm({ ...profileForm, academicField: e.target.value })}>
+                      <option value="">Selectionner...</option>
+                      {ACADEMIC_FIELD_OPTIONS.map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>

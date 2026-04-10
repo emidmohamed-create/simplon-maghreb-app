@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { STATUS_LABELS, INSERTION_LABELS } from '@/lib/utils';
+import { ACADEMIC_FIELD_OPTIONS, ACADEMIC_LEVEL_OPTIONS } from '@/lib/academic-options';
 
 const STATUS_COLORS: Record<string, string> = {
   IN_TRAINING: 'badge-blue',
@@ -339,11 +340,21 @@ export default function LearnersPage() {
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">Niveau academique</label>
-                    <input className="form-input" value={form.academicLevel} onChange={(e) => setForm({ ...form, academicLevel: e.target.value })} />
+                    <select className="form-select" value={form.academicLevel} onChange={(e) => setForm({ ...form, academicLevel: e.target.value })}>
+                      <option value="">Selectionner...</option>
+                      {ACADEMIC_LEVEL_OPTIONS.map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="form-group">
                     <label className="form-label">Filiere</label>
-                    <input className="form-input" value={form.academicField} onChange={(e) => setForm({ ...form, academicField: e.target.value })} />
+                    <select className="form-select" value={form.academicField} onChange={(e) => setForm({ ...form, academicField: e.target.value })}>
+                      <option value="">Selectionner...</option>
+                      {ACADEMIC_FIELD_OPTIONS.map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>
@@ -417,11 +428,21 @@ export default function LearnersPage() {
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">Niveau academique</label>
-                    <input className="form-input" value={editForm.academicLevel} onChange={(e) => setEditForm({ ...editForm, academicLevel: e.target.value })} />
+                    <select className="form-select" value={editForm.academicLevel} onChange={(e) => setEditForm({ ...editForm, academicLevel: e.target.value })}>
+                      <option value="">Selectionner...</option>
+                      {ACADEMIC_LEVEL_OPTIONS.map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="form-group">
                     <label className="form-label">Filiere</label>
-                    <input className="form-input" value={editForm.academicField} onChange={(e) => setEditForm({ ...editForm, academicField: e.target.value })} />
+                    <select className="form-select" value={editForm.academicField} onChange={(e) => setEditForm({ ...editForm, academicField: e.target.value })}>
+                      <option value="">Selectionner...</option>
+                      {ACADEMIC_FIELD_OPTIONS.map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 <div className="form-group">
