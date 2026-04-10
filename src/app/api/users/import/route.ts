@@ -27,19 +27,34 @@ export async function POST(req: Request) {
     const errors: string[] = [];
 
     for (let i = 1; i < lines.length; i++) {
-      // Split basic CSV respecting commas (simple approach)
-      const parts = lines[i].split(',').map(p => p.trim());
-      if (parts.length < 3) continue;
+      // Split CSV respecting comma or semicolon
+      const separator = lines[i].includes(';') ? ';' : ',';
+      const parts = lines[i].split(separator).map(p => p.trim());
+      
+      if (parts.length < 2) continue;
 
-      const firstName = parts[0];
-      const lastName = parts[1];
-      const email = parts[2];
-      const role = parts[3] || 'LEARNER';
-      const password = parts[4] || 'Simplon123!';
+      let firstName = parts[0];
+      let lastName = parts[1];
+      let email = "";
+      let role = "LEARNER";
+      let password = "Simplon123!";
+
+      // Logic to handle different column counts (if email is skipped)
+      if (parts.length >= 3 && parts[2].includes('@')) {
+        // We have an email in the third column
+        email = parts[2];
+        role = parts[3] || 'LEARNER';
+        password = parts[4] || 'Simplon123!';
+      } else {
+        // No email or weird format, we generate one and shift columns
+        email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}@simplon.ma`.replace(/\s+/g, '');
+        role = parts[2] || 'LEARNER';
+        password = parts[3] || 'Simplon123!';
+      }
       
       if (!firstName || !lastName || !email) {
         errorCount++;
-        errors.push(`Ligne ${i + 1}: Données incomplètes`);
+        errors.push(`Ligne ${i + 1}: Données manquantes`);
         continue;
       }
 
@@ -47,7 +62,7 @@ export async function POST(req: Request) {
       const existing = await prisma.user.findUnique({ where: { email } });
       if (existing) {
         errorCount++;
-        errors.push(`Ligne ${i + 1}: L'email ${email} existe déjà`);
+        errors.push(`Ligne ${i + 1}: L'email ${email} est déjà utilisé`);
         continue;
       }
 
@@ -59,14 +74,14 @@ export async function POST(req: Request) {
             firstName,
             lastName,
             email,
-            role,
+            role: role.toUpperCase().includes('ADMIN') ? 'ADMIN_CAMPUS' : role.toUpperCase(),
             passwordHash,
           }
         });
         createdCount++;
       } catch (err) {
         errorCount++;
-        errors.push(`Ligne ${i + 1}: Erreur création base de données`);
+        errors.push(`Ligne ${i + 1}: Erreur technique base de données`);
       }
     }
 
