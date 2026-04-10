@@ -103,7 +103,7 @@ export default function LoginPage() {
           </button>
 
           <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '12px', color: 'var(--text-muted)' }}>
-            Démo : admin@simplon.ma / password123
+            Démo : admin@simplon.ma / Simplon2025!
           </p>
         </form>
       </div>
