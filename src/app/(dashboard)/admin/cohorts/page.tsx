@@ -88,7 +88,11 @@ export default function CohortsPage() {
                   <label className="form-label">Programme</label>
                   <select className="form-select" value={form.programId} onChange={e => setForm({...form, programId: e.target.value})} required>
                     <option value="">Sélectionner</option>
-                    {programs.map((p: any) => <option key={p.id} value={p.id}>{p.name} - {p.campus.name}</option>)}
+                    {programs.map((p: any) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}{p.project?.name ? ` - ${p.project.name}` : ''}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="form-group">
