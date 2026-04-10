@@ -6,14 +6,9 @@ export async function GET(req: Request) {
   const { error } = await requireAuth(ADMIN_ROLES);
   if (error) return error;
 
-  const { searchParams } = new URL(req.url);
-  const campusId = searchParams.get('campusId');
-
   const programs = await prisma.program.findMany({
-    where: campusId ? { campusId } : undefined,
     orderBy: { name: 'asc' },
     include: {
-      campus: { select: { name: true } },
       project: { select: { name: true, code: true } },
       _count: { select: { cohorts: true } },
     },
@@ -23,18 +18,18 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const { error } = await requireAuth(['SUPER_ADMIN', 'ADMIN_CAMPUS']);
+  const { error } = await requireAuth(['SUPER_ADMIN']);
   if (error) return error;
 
   const body = await req.json();
-  const { name, campusId, projectId, description } = body;
+  const { name, projectId, description } = body;
 
-  if (!name || !campusId) {
-    return NextResponse.json({ error: 'Nom et campus requis' }, { status: 400 });
+  if (!name) {
+    return NextResponse.json({ error: 'Le nom du programme est requis' }, { status: 400 });
   }
 
   const program = await prisma.program.create({
-    data: { name, campusId, projectId: projectId || null, description },
+    data: { name, projectId: projectId || null, description },
   });
 
   return NextResponse.json(program, { status: 201 });

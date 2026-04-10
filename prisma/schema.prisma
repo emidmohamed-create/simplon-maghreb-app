@@ -134,7 +134,6 @@ model Campus {
   isActive Boolean @default(true) @map("is_active")
 
   users      User[]
-  programs   Program[]
   cohorts    Cohort[]           @relation("CampusCohorts")
   projects   Project[]          @relation("ProjectCampuses")
   candidates Candidate[]
@@ -146,13 +145,11 @@ model Campus {
 
 model Program {
   id          String  @id @default(cuid())
-  campusId    String  @map("campus_id")
   projectId   String? @map("project_id")
   name        String
   description String?
   isActive    Boolean @default(true) @map("is_active")
 
-  campus  Campus   @relation(fields: [campusId], references: [id])
   project Project? @relation(fields: [projectId], references: [id])
 
   cohorts Cohort[]
