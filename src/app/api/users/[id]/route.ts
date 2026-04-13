@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/rbac';
 import { hash } from 'bcryptjs';
@@ -17,7 +18,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       cohortAccesses: {
         include: { cohort: { select: { id: true, name: true } } },
       },
-    }
+    },
   });
 
   if (!user) return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 });
@@ -30,10 +31,20 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
   try {
     const body = await req.json();
-    const { firstName, lastName, email, role, password, campusId, isActive, projectAccessIds = [], cohortAccessIds = [] } = body;
+    const {
+      firstName,
+      lastName,
+      email,
+      role,
+      password,
+      campusId,
+      isActive,
+      projectAccessIds = [],
+      cohortAccessIds = [],
+    } = body;
 
     const data: any = { firstName, lastName, email, role, campusId, isActive };
-    
+
     if (password && password.length >= 8) {
       data.passwordHash = await hash(password, 12);
     }
@@ -41,7 +52,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const updatedUser = await prisma.$transaction(async (tx) => {
       const updated = await tx.user.update({
         where: { id: params.id },
-        data
+        data,
       });
 
       await tx.userProjectAccess.deleteMany({ where: { userId: params.id } });
@@ -66,7 +77,13 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
     return NextResponse.json(updatedUser);
   } catch (err) {
-    return NextResponse.json({ error: 'Erreur lors de la mise à jour' }, { status: 500 });
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2021') {
+      return NextResponse.json(
+        { error: 'Base de donnees non migree: veuillez executer prisma migrate deploy.' },
+        { status: 500 }
+      );
+    }
+    return NextResponse.json({ error: 'Erreur lors de la mise a jour' }, { status: 500 });
   }
 }
 
@@ -76,10 +93,13 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
 
   try {
     await prisma.user.delete({
-      where: { id: params.id }
+      where: { id: params.id },
     });
     return NextResponse.json({ success: true });
   } catch (err) {
-    return NextResponse.json({ error: "Erreur lors de la suppression. Vérifiez que l'utilisateur n'est pas lié à d'autres données." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Erreur lors de la suppression. Verifiez que l'utilisateur n'est pas lie a d'autres donnees." },
+      { status: 500 }
+    );
   }
 }

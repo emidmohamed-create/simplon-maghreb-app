@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/rbac';
+import { Prisma } from '@prisma/client';
 
 export async function GET() {
   const { error } = await requireAuth(['SUPER_ADMIN']);
@@ -65,6 +66,12 @@ export async function POST(req: Request) {
     return NextResponse.json(user, { status: 201 });
   } catch (err: any) {
     console.error(err);
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2021') {
+      return NextResponse.json(
+        { error: 'Base de donnees non migree: veuillez executer prisma migrate deploy.' },
+        { status: 500 }
+      );
+    }
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }
