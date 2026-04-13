@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, ADMIN_ROLES } from '@/lib/rbac';
+import { format } from 'date-fns';
 
 export async function GET(req: Request) {
   const { error } = await requireAuth(ADMIN_ROLES);
@@ -216,6 +217,30 @@ export async function GET(req: Request) {
   const qualifiedCandidates = await prisma.candidate.count({ where: { currentStage: { in: ['QUALIFIED', 'CONVERTED'] } } });
   const convertedCandidates = await prisma.candidate.count({ where: { currentStage: 'CONVERTED' } });
 
+  // Monthly attendance trend
+  const allSessions = await prisma.attendanceSession.findMany({
+      where: cohortId ? { cohortId } : (campusId || programId || projectId ? { cohort: cohortWhere } : undefined),
+      include: {
+          records: { select: { status: true } }
+      },
+      orderBy: { date: 'asc' }
+  });
+
+  const monthlyData: Record<string, { total: number, present: number }> = {};
+  allSessions.forEach(s => {
+      const monthKey = format(new Date(s.date), 'MM/yyyy');
+      if (!monthlyData[monthKey]) monthlyData[monthKey] = { total: 0, present: 0 };
+      
+      const sessionRecords = s.records.filter(r => r.status !== 'NOT_APPLICABLE');
+      monthlyData[monthKey].total += sessionRecords.length;
+      monthlyData[monthKey].present += sessionRecords.filter(r => r.status === 'PRESENT' || r.status === 'LATE').length;
+  });
+
+  const attendanceTrend = Object.entries(monthlyData).map(([name, data]) => ({
+      name,
+      presenceRate: data.total > 0 ? Math.round((data.present / data.total) * 10000) / 100 : 100
+  }));
+
   return NextResponse.json({
     overview: {
       totalLearners,
@@ -243,6 +268,7 @@ export async function GET(req: Request) {
     })),
     cohortsTable,
     absenceByCohort,
+    attendanceTrend,
     riskLearners: riskData,
   });
 }

@@ -79,6 +79,7 @@ interface AnalyticsData {
     lateMinutes: number;
     risk: string;
   }>;
+  attendanceTrend: Array<{ name: string; presenceRate: number }>;
 }
 
 export default function DashboardPilotage() {
@@ -168,6 +169,11 @@ export default function DashboardPilotage() {
             <div className="kpi-value">{data.overview.absenceRate}%</div>
           </div>
           <div className="kpi-card">
+            <div className="kpi-icon green">📈</div>
+            <div className="kpi-label">Taux de présence</div>
+            <div className="kpi-value">{Math.round((100 - data.overview.absenceRate) * 100) / 100}%</div>
+          </div>
+          <div className="kpi-card">
             <div className="kpi-icon red">⏱️</div>
             <div className="kpi-label">Taux de retard</div>
             <div className="kpi-value">{data.overview.lateRate}%</div>
@@ -249,6 +255,24 @@ export default function DashboardPilotage() {
                   <Bar dataKey="INSERTED" name="Inséré" stackId="a" fill={COLORS.INSERTED} />
                   <Bar dataKey="EXCLUDED" name="Exclu" stackId="a" fill={COLORS.EXCLUDED} />
                 </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          {/* Presence Trend Chart */}
+          <div className="card" style={{ gridColumn: 'span 2' }}>
+            <div className="card-header">
+              <h3 className="card-title">Évolution du taux de présence mensuel</h3>
+            </div>
+            <div className="chart-container" style={{ height: 300 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data.attendanceTrend}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                  <YAxis domain={[0, 100]} unit="%" />
+                  <Tooltip formatter={(v: number) => `${v}%`} />
+                  <Legend />
+                  <Line type="monotone" dataKey="presenceRate" name="Taux de présence" stroke="#22c55e" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
