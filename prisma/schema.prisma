@@ -257,10 +257,11 @@ model LearnerProfile {
   academicField    String?   @map("academic_field") // Informatique | Économie et Gestion | etc.
   statusCurrent    String    @default("IN_TRAINING") @map("status_current") // LearnerStatus
   insertionType    String?   @map("insertion_type") // InsertionType: CDI | CDD | FREELANCE | INTERNSHIP | PRE_HIRE | FURTHER_STUDIES | ACTIVE_SEARCH
-  insertionCompany String?   @map("insertion_company")
-  insertionDate    DateTime? @map("insertion_date")
-  insertionProof   String?   @map("insertion_proof")
-  createdAt        DateTime  @default(now()) @map("created_at")
+  insertionCompany  String?   @map("insertion_company")
+  insertionDate     DateTime? @map("insertion_date")
+  insertionProof    String?   @map("insertion_proof")
+  manualAbsenceRate Float?    @map("manual_absence_rate")
+  createdAt         DateTime  @default(now()) @map("created_at")
 
   user      User?      @relation(fields: [userId], references: [id])
   candidate Candidate? @relation(fields: [candidateId], references: [id])

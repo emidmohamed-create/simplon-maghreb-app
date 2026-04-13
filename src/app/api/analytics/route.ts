@@ -93,7 +93,7 @@ export async function GET(req: Request) {
       campus: { select: { name: true } },
       project: { select: { name: true, code: true } },
       trainer: { select: { firstName: true, lastName: true } },
-      learnerProfiles: { select: { statusCurrent: true } },
+      learnerProfiles: { select: { id: true, statusCurrent: true, manualAbsenceRate: true, attendanceRecords: { select: { status: true } } } },
       attendanceSessions: {
         include: {
           records: { select: { status: true, lateMinutes: true } },
@@ -109,6 +109,32 @@ export async function GET(req: Request) {
     const inserted = learners.filter(l => l.statusCurrent === 'INSERTED').length;
     const excluded = learners.filter(l => l.statusCurrent === 'EXCLUDED').length;
 
+    let totalRecordsCount = 0;
+    let manualSum = 0;
+    let manualCount = 0;
+    let computedSum = 0;
+    let computedCount = 0;
+
+    learners.forEach(l => {
+        if (l.manualAbsenceRate !== null && l.manualAbsenceRate !== undefined) {
+            manualSum += l.manualAbsenceRate;
+            manualCount += 1;
+        } else {
+            const lRecords = l.attendanceRecords?.filter((r: any) => r.status !== 'NOT_APPLICABLE') || [];
+            if (lRecords.length > 0) {
+               const lAbs = lRecords.filter((r: any) => r.status === 'ABSENT' || r.status === 'JUSTIFIED_ABSENT').length;
+               computedSum += (lAbs / lRecords.length) * 100;
+               computedCount += 1;
+            }
+        }
+    });
+
+    // Approximate average taking manual and computed into account
+    let absRate = 0;
+    if (manualCount + computedCount > 0) {
+        absRate = Math.round((manualSum + computedSum) / (manualCount + computedCount) * 100) / 100;
+    }
+
     const records = c.attendanceSessions.flatMap(s => s.records);
     const totalR = records.filter(r => r.status !== 'NOT_APPLICABLE').length;
     const abs = records.filter(r => r.status === 'ABSENT' || r.status === 'JUSTIFIED_ABSENT').length;
@@ -122,7 +148,6 @@ export async function GET(req: Request) {
     const elapsed = Math.max(0, Math.ceil((now.getTime() - start.getTime()) / (1000 * 86400)));
     const progress = Math.min(100, Math.max(0, Math.round((elapsed / totalDays) * 100)));
 
-    const absRate = totalR > 0 ? Math.round((abs / totalR) * 10000) / 100 : 0;
     const lateRate = totalR > 0 ? Math.round((late / totalR) * 10000) / 100 : 0;
 
     let status = 'À venir';
@@ -172,7 +197,8 @@ export async function GET(req: Request) {
     const abs = l.attendanceRecords.filter(r => r.status === 'ABSENT' || r.status === 'JUSTIFIED_ABSENT').length;
     const lates = l.attendanceRecords.filter(r => r.status === 'LATE').length;
     const lateMin = l.attendanceRecords.reduce((s, r) => s + (r.lateMinutes || 0), 0);
-    const absRate = totalR > 0 ? Math.round((abs / totalR) * 10000) / 100 : 0;
+    const calculatedAbsRate = totalR > 0 ? Math.round((abs / totalR) * 10000) / 100 : 0;
+    const absRate = l.manualAbsenceRate !== null ? l.manualAbsenceRate : calculatedAbsRate;
     return {
       id: l.id,
       name: `${l.firstName} ${l.lastName}`,

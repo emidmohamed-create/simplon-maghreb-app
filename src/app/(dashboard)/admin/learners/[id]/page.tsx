@@ -105,6 +105,7 @@ export default function LearnerDetailPage() {
       emergencyContact: learner.emergencyContact || '',
       academicLevel: learner.academicLevel || '',
       academicField: learner.academicField || '',
+      manualAbsenceRate: learner.manualAbsenceRate !== null ? learner.manualAbsenceRate.toString() : '',
     });
   }, [learner]);
 
@@ -251,7 +252,7 @@ export default function LearnerDetailPage() {
   const absences   = records.filter((r: any) => r.status === 'ABSENT' || r.status === 'JUSTIFIED_ABSENT').length;
   const lates      = records.filter((r: any) => r.status === 'LATE').length;
   const lateMin    = records.reduce((s: number, r: any) => s + (r.lateMinutes || 0), 0);
-  const absRate    = total > 0 ? Math.round((absences / total) * 100) : 0;
+  const absRate    = learner.manualAbsenceRate !== null ? learner.manualAbsenceRate : (total > 0 ? Math.round((absences / total) * 100) : 0);
 
   // Sprint evaluations
   const sprintEvals  = learner.sprintEvaluations || [];
@@ -918,6 +919,7 @@ export default function LearnerDetailPage() {
                   <span className="text-muted">Date de naissance</span><span>{learner.birthdate ? formatDate(learner.birthdate) : '—'}</span>
                   <span className="text-muted">Genre</span><span>{learner.gender === 'MALE' ? 'Homme' : learner.gender === 'FEMALE' ? 'Femme' : '—'}</span>
                   <span className="text-muted">Contact urgence</span><span>{learner.emergencyContact || '—'}</span>
+                  <span className="text-muted">Taux d&apos;absence manuel</span><span style={{ color: learner.manualAbsenceRate !== null ? '#3b82f6' : 'var(--text-muted)' }}>{learner.manualAbsenceRate !== null ? `${learner.manualAbsenceRate}% (Force override)` : '—'}</span>
                 </div>
               </div>
             </div>
@@ -1033,6 +1035,12 @@ export default function LearnerDetailPage() {
                         <option key={option} value={option}>{option}</option>
                       ))}
                     </select>
+                  </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Taux d&apos;absence manuel (%)</label>
+                    <input type="number" step="0.01" className="form-input" placeholder="Ex: 12.5 (Écrase le calcul auto)" value={profileForm.manualAbsenceRate} onChange={e => setProfileForm({ ...profileForm, manualAbsenceRate: e.target.value })} />
+                    <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>💡 Utile pour la migration de données (écrase le calcul basé sur l&apos;appel quotidien).</p>
                   </div>
                 </div>
               </div>

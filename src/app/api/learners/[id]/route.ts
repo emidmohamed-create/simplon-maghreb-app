@@ -83,6 +83,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   if (body.insertionType !== undefined) updateData.insertionType = body.insertionType || null;
   if (body.insertionCompany !== undefined) updateData.insertionCompany = body.insertionCompany || null;
   if (body.insertionDate !== undefined) updateData.insertionDate = body.insertionDate ? new Date(body.insertionDate) : null;
+  if (body.manualAbsenceRate !== undefined) updateData.manualAbsenceRate = body.manualAbsenceRate !== null ? parseFloat(body.manualAbsenceRate) : null;
 
   const previousStatus = learnerBefore.statusCurrent;
   const shouldCreateStatusHistory = !!body.statusCurrent && body.statusCurrent !== previousStatus;
