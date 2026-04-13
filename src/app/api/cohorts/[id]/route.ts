@@ -1,10 +1,15 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireAuth, ADMIN_ROLES } from '@/lib/rbac';
+import { requireAuth, ADMIN_ROLES, canAccessCohortByScope } from '@/lib/rbac';
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
-  const { error } = await requireAuth([...ADMIN_ROLES, 'TRAINER']);
+  const { error, user } = await requireAuth([...ADMIN_ROLES, 'TRAINER']);
   if (error) return error;
+
+  if (user?.role === 'PROJECT_MANAGER') {
+    const allowed = await canAccessCohortByScope(user.id, user.role, params.id);
+    if (!allowed) return NextResponse.json({ error: 'Acces refuse a cette cohorte' }, { status: 403 });
+  }
 
   const cohort = await prisma.cohort.findUnique({
     where: { id: params.id },
@@ -38,8 +43,13 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 }
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
-  const { error } = await requireAuth(['SUPER_ADMIN', 'ADMIN_CAMPUS', 'PROJECT_MANAGER']);
+  const { error, user } = await requireAuth(['SUPER_ADMIN', 'ADMIN_CAMPUS', 'PROJECT_MANAGER']);
   if (error) return error;
+
+  if (user?.role === 'PROJECT_MANAGER') {
+    const allowed = await canAccessCohortByScope(user.id, user.role, params.id);
+    if (!allowed) return NextResponse.json({ error: 'Acces refuse a cette cohorte' }, { status: 403 });
+  }
 
   try {
     const body = await req.json();
@@ -66,7 +76,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 }
 
 export async function DELETE(req: Request, { params }: { params: { id: string } }) {
-  const { error } = await requireAuth(['SUPER_ADMIN']);
+  const { error, user } = await requireAuth(['SUPER_ADMIN']);
   if (error) return error;
 
   try {

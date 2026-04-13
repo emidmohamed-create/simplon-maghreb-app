@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireAuth, ADMIN_ROLES } from '@/lib/rbac';
+import { requireAuth, ADMIN_ROLES, getProjectManagerScope } from '@/lib/rbac';
 
 export async function GET(req: Request) {
-  const { error } = await requireAuth(ADMIN_ROLES);
+  const { error, user } = await requireAuth(ADMIN_ROLES);
   if (error) return error;
 
   const { searchParams } = new URL(req.url);
@@ -13,6 +13,22 @@ export async function GET(req: Request) {
   const where: any = {};
   if (programId) where.programId = programId;
   if (projectId) where.projectId = projectId;
+
+  if (user?.role === 'PROJECT_MANAGER') {
+    const scope = await getProjectManagerScope(user.id);
+    if (scope.projectIds.length === 0 && scope.cohortIds.length === 0) {
+      return NextResponse.json([]);
+    }
+    where.AND = [
+      ...(where.AND || []),
+      {
+        OR: [
+          ...(scope.projectIds.length > 0 ? [{ projectId: { in: scope.projectIds } }] : []),
+          ...(scope.cohortIds.length > 0 ? [{ id: { in: scope.cohortIds } }] : []),
+        ],
+      },
+    ];
+  }
 
   const cohorts = await prisma.cohort.findMany({
     where,
@@ -61,6 +77,13 @@ export async function POST(req: Request) {
         },
       });
       finalProjectId = newProject.id;
+    }
+
+    if (user?.role === 'PROJECT_MANAGER') {
+      const scope = await getProjectManagerScope(user.id);
+      if (!scope.projectIds.includes(finalProjectId)) {
+        return NextResponse.json({ error: 'Acces refuse: ce projet n est pas dans votre perimetre' }, { status: 403 });
+      }
     }
 
     // 2. Create the cohort

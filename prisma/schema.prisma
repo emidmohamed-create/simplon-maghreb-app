@@ -79,6 +79,8 @@ model User {
   organizedMeetings      LearnerMeeting[]              @relation("MeetingOrganizer")
   prpeCasesCreated       PRPECase[]                    @relation("PRPECreator")
   organizedFollowUps     InsertionFollowUp[]           @relation("InsertionOrganizer")
+  projectAccesses        UserProjectAccess[]
+  cohortAccesses         UserCohortAccess[]
 
   @@map("users")
 }
@@ -123,6 +125,7 @@ model Project {
   cohorts      Cohort[]
   candidates   Candidate[]
   projectPlans ProjectPlan[]
+  userAccesses UserProjectAccess[]
 
   @@map("projects")
 }
@@ -182,8 +185,35 @@ model Cohort {
   relatedTimelineItems  TimelineItem[]                @relation("ItemCohort")
   filRougeProject       FilRougeProject?
   juryBlancSessions     JuryBlancSession[]
+  userAccesses          UserCohortAccess[]
 
   @@map("cohorts")
+}
+
+model UserProjectAccess {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  projectId String   @map("project_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@map("user_project_accesses")
+}
+
+model UserCohortAccess {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  cohortId  String   @map("cohort_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cohort Cohort @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, cohortId])
+  @@map("user_cohort_accesses")
 }
 
 // ============================================================

@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireAuth, ADMIN_ROLES } from '@/lib/rbac';
+import { requireAuth, ADMIN_ROLES, canAccessCohortByScope } from '@/lib/rbac';
 
 // GET /api/cohorts/[id]/jury-blanc/[sessionId] — full grid data
 export async function GET(req: Request, { params }: { params: { id: string; sessionId: string } }) {
-  const { error } = await requireAuth([...ADMIN_ROLES, 'TRAINER']);
+  const { error, user } = await requireAuth([...ADMIN_ROLES, 'TRAINER']);
   if (error) return error;
+  if (user?.role === 'PROJECT_MANAGER') {
+    const allowed = await canAccessCohortByScope(user.id, user.role, params.id);
+    if (!allowed) return NextResponse.json({ error: 'Acces refuse a cette cohorte' }, { status: 403 });
+  }
 
   const [session, learners, evaluations, learnerRecords] = await Promise.all([
     prisma.juryBlancSession.findUnique({
@@ -34,8 +38,12 @@ export async function GET(req: Request, { params }: { params: { id: string; sess
 
 // PUT /api/cohorts/[id]/jury-blanc/[sessionId] — update session settings
 export async function PUT(req: Request, { params }: { params: { id: string; sessionId: string } }) {
-  const { error } = await requireAuth(ADMIN_ROLES);
+  const { error, user } = await requireAuth(ADMIN_ROLES);
   if (error) return error;
+  if (user?.role === 'PROJECT_MANAGER') {
+    const allowed = await canAccessCohortByScope(user.id, user.role, params.id);
+    if (!allowed) return NextResponse.json({ error: 'Acces refuse a cette cohorte' }, { status: 403 });
+  }
 
   try {
     const body = await req.json();
@@ -59,8 +67,12 @@ export async function PUT(req: Request, { params }: { params: { id: string; sess
 
 // DELETE /api/cohorts/[id]/jury-blanc/[sessionId] — delete session
 export async function DELETE(req: Request, { params }: { params: { id: string; sessionId: string } }) {
-  const { error } = await requireAuth(ADMIN_ROLES);
+  const { error, user } = await requireAuth(ADMIN_ROLES);
   if (error) return error;
+  if (user?.role === 'PROJECT_MANAGER') {
+    const allowed = await canAccessCohortByScope(user.id, user.role, params.id);
+    if (!allowed) return NextResponse.json({ error: 'Acces refuse a cette cohorte' }, { status: 403 });
+  }
 
   try {
     await prisma.juryBlancSession.delete({ where: { id: params.sessionId } });

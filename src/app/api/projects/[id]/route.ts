@@ -1,10 +1,15 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireAuth, ADMIN_ROLES } from '@/lib/rbac';
+import { requireAuth, ADMIN_ROLES, canAccessProjectByScope } from '@/lib/rbac';
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
-  const { error } = await requireAuth(ADMIN_ROLES);
+  const { error, user } = await requireAuth(ADMIN_ROLES);
   if (error) return error;
+
+  if (user?.role === 'PROJECT_MANAGER') {
+    const allowed = await canAccessProjectByScope(user.id, user.role, params.id);
+    if (!allowed) return NextResponse.json({ error: 'Acces refuse a ce projet' }, { status: 403 });
+  }
 
   const project = await prisma.project.findUnique({
     where: { id: params.id },
@@ -38,8 +43,13 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 }
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
-  const { error } = await requireAuth(['SUPER_ADMIN', 'PROJECT_MANAGER']);
+  const { error, user } = await requireAuth(['SUPER_ADMIN', 'PROJECT_MANAGER']);
   if (error) return error;
+
+  if (user?.role === 'PROJECT_MANAGER') {
+    const allowed = await canAccessProjectByScope(user.id, user.role, params.id);
+    if (!allowed) return NextResponse.json({ error: 'Acces refuse a ce projet' }, { status: 403 });
+  }
 
   const body = await req.json();
   const project = await prisma.project.update({

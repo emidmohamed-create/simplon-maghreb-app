@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireAuth, ADMIN_ROLES, STAFF_ROLES } from '@/lib/rbac';
+import { requireAuth, ADMIN_ROLES, STAFF_ROLES, getProjectManagerScope, canAccessCohortByScope } from '@/lib/rbac';
 
 export async function GET(req: Request) {
   const { error, user } = await requireAuth(STAFF_ROLES);
@@ -28,6 +28,20 @@ export async function GET(req: Request) {
       select: { id: true },
     });
     where.cohortId = { in: trainerCohorts.map((c) => c.id) };
+  }
+
+  if (user!.role === 'PROJECT_MANAGER') {
+    const scope = await getProjectManagerScope(user!.id);
+    if (scope.cohortIds.length === 0) {
+      return NextResponse.json([]);
+    }
+    if (where.cohortId && typeof where.cohortId === 'string') {
+      if (!scope.cohortIds.includes(where.cohortId)) {
+        return NextResponse.json([]);
+      }
+    } else {
+      where.cohortId = { in: scope.cohortIds };
+    }
   }
 
   const learners = await prisma.learnerProfile.findMany({
@@ -80,6 +94,13 @@ export async function POST(req: Request) {
     const cohort = await prisma.cohort.findUnique({ where: { id: cohortId } });
     if (!cohort) {
       return NextResponse.json({ error: 'Cohort not found' }, { status: 404 });
+    }
+
+    if (authUser?.role === 'PROJECT_MANAGER') {
+      const allowed = await canAccessCohortByScope(authUser.id, authUser.role, cohortId);
+      if (!allowed) {
+        return NextResponse.json({ error: 'Access denied to this cohort' }, { status: 403 });
+      }
     }
 
     const existing = await prisma.learnerProfile.findFirst({ where: { userId, cohortId } });

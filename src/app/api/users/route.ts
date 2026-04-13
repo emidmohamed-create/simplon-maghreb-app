@@ -12,6 +12,8 @@ export async function GET() {
       id: true, email: true, firstName: true, lastName: true, role: true,
       isActive: true, lastLogin: true,
       campus: { select: { name: true } },
+      projectAccesses: { select: { projectId: true, project: { select: { name: true } } } },
+      cohortAccesses: { select: { cohortId: true, cohort: { select: { name: true } } } },
     },
   });
 
@@ -24,7 +26,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { firstName, lastName, email, role, password, campusId } = body;
+    const { firstName, lastName, email, role, password, campusId, projectAccessIds = [], cohortAccessIds = [] } = body;
 
     if (!firstName || !lastName || !email || !password) {
       return NextResponse.json({ error: 'Champs obligatoires manquants' }, { status: 400 });
@@ -47,6 +49,16 @@ export async function POST(req: Request) {
         role: role || 'LEARNER',
         passwordHash,
         campusId: campusId || null,
+        projectAccesses: role === 'PROJECT_MANAGER' && projectAccessIds.length > 0
+          ? { createMany: { data: projectAccessIds.map((projectId: string) => ({ projectId })) } }
+          : undefined,
+        cohortAccesses: role === 'PROJECT_MANAGER' && cohortAccessIds.length > 0
+          ? { createMany: { data: cohortAccessIds.map((cohortId: string) => ({ cohortId })) } }
+          : undefined,
+      },
+      include: {
+        projectAccesses: { select: { projectId: true } },
+        cohortAccesses: { select: { cohortId: true } },
       },
     });
 

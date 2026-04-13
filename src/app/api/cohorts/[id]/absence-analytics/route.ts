@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireAuth, ADMIN_ROLES } from '@/lib/rbac';
+import { requireAuth, ADMIN_ROLES, canAccessCohortByScope } from '@/lib/rbac';
 
 function getWeekKey(d: Date) {
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -17,8 +17,13 @@ function pct(value: number, total: number) {
 }
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
-  const { error } = await requireAuth([...ADMIN_ROLES, 'TRAINER']);
+  const { error, user } = await requireAuth([...ADMIN_ROLES, 'TRAINER']);
   if (error) return error;
+
+  if (user?.role === 'PROJECT_MANAGER') {
+    const allowed = await canAccessCohortByScope(user.id, user.role, params.id);
+    if (!allowed) return NextResponse.json({ error: 'Acces refuse a cette cohorte' }, { status: 403 });
+  }
 
   const cohort = await prisma.cohort.findUnique({
     where: { id: params.id },

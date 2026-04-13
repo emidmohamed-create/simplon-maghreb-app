@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireAuth, STAFF_ROLES } from '@/lib/rbac';
+import { requireAuth, STAFF_ROLES, canAccessCohortByScope } from '@/lib/rbac';
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
-  const { error } = await requireAuth(STAFF_ROLES);
+  const { error, user } = await requireAuth(STAFF_ROLES);
   if (error) return error;
+  if (user?.role === 'PROJECT_MANAGER') {
+    const allowed = await canAccessCohortByScope(user.id, user.role, params.id);
+    if (!allowed) return NextResponse.json({ error: 'Acces refuse a cette cohorte' }, { status: 403 });
+  }
 
   const followUps = await prisma.insertionFollowUp.findMany({
     where: { learnerProfile: { cohortId: params.id } },
@@ -22,6 +26,10 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const { error, user } = await requireAuth(STAFF_ROLES);
   if (error) return error;
+  if (user?.role === 'PROJECT_MANAGER') {
+    const allowed = await canAccessCohortByScope(user.id, user.role, params.id);
+    if (!allowed) return NextResponse.json({ error: 'Acces refuse a cette cohorte' }, { status: 403 });
+  }
 
   const body = await req.json();
   const { learnerIds, startDate, endDate, intervalDays = 15, modality = 'CALL' } = body;
@@ -34,6 +42,13 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const end = new Date(endDate);
   
   if (start >= end) return NextResponse.json({ error: 'Start date must be before end date' }, { status: 400 });
+
+  const learnersCount = await prisma.learnerProfile.count({
+    where: { id: { in: learnerIds }, cohortId: params.id },
+  });
+  if (learnersCount !== learnerIds.length) {
+    return NextResponse.json({ error: 'Some learners do not belong to this cohort' }, { status: 400 });
+  }
 
   const newFollowUps = [];
   

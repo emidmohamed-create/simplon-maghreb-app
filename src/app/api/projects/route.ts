@@ -1,12 +1,20 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireAuth, ADMIN_ROLES } from '@/lib/rbac';
+import { requireAuth, ADMIN_ROLES, getProjectManagerScope } from '@/lib/rbac';
 
 export async function GET(req: Request) {
-  const { error } = await requireAuth(ADMIN_ROLES);
+  const { error, user } = await requireAuth(ADMIN_ROLES);
   if (error) return error;
 
+  const where: any = {};
+  if (user?.role === 'PROJECT_MANAGER') {
+    const scope = await getProjectManagerScope(user.id);
+    if (scope.projectIds.length === 0) return NextResponse.json([]);
+    where.id = { in: scope.projectIds };
+  }
+
   const projects = await prisma.project.findMany({
+    where,
     orderBy: { createdAt: 'desc' },
     include: {
       partner: { select: { name: true } },
@@ -18,7 +26,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const { error } = await requireAuth(['SUPER_ADMIN', 'PROJECT_MANAGER']);
+  const { error } = await requireAuth(['SUPER_ADMIN']);
   if (error) return error;
 
   const body = await req.json();
