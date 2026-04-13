@@ -462,7 +462,7 @@ export default function LearnerDetailPage() {
                   <button className="btn btn-primary btn-sm" onClick={() => setShowJustModal(true)}>+ Ajouter</button>
                 </div>
                 {justifications.length === 0 ? (
-                  <div className="card-body" style={{ textAlign: 'center', py: 32 }}>Aucun justificatif enregistré.</div>
+                  <div className="card-body" style={{ textAlign: 'center', padding: '32px 0' }}>Aucun justificatif enregistré.</div>
                 ) : (
                   <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {justifications.map((j: any) => {

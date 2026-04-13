@@ -49,7 +49,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       monthlyPresenceRates: true,
       meetings: {
         orderBy: { date: 'desc' },
-        include: { tutor: { select: { firstName: true, lastName: true } } }
+        include: { organizedBy: { select: { firstName: true, lastName: true } } }
       }
     },
   });
@@ -74,7 +74,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
   // 2. Sprint Average
   const sprintTotal = learner.sprintEvaluations.length;
-  const sprintSum = learner.sprintEvaluations.reduce((acc, e) => acc + (e.rating || 0), 0);
+  const sprintSum = learner.sprintEvaluations.reduce((acc, e) => acc + (e.masteryLevel || 0), 0);
   const sprintAverage = sprintTotal > 0 ? Math.round((sprintSum / sprintTotal) * 10) / 10 : 0;
 
   // 3. Fil Rouge Progress
