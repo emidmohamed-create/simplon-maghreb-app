@@ -316,7 +316,7 @@ export default function LearnerDetailPage() {
 
   return (
     <>
-      {/* ═══ PAGE HEADER ═══ */}
+      {/* PAGE HEADER */}
       <div className="page-header">
         <div>
           <div className="breadcrumbs">
@@ -996,8 +996,8 @@ export default function LearnerDetailPage() {
               </table>
             </div>
           </div>
-          </div>
-          </div>
+
+
           </div>
         )}
 
