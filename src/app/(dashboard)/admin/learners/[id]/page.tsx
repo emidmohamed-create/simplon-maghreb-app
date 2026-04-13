@@ -243,6 +243,7 @@ export default function LearnerDetailPage() {
     }
   };
 
+
   if (loading) return <div className="page-body"><div className="loading-overlay"><span className="loading-spinner" /> Chargement...</div></div>;
   if (!learner) return <div className="page-body"><div className="empty-state"><p>Apprenant non trouvé</p></div></div>;
 
@@ -272,8 +273,8 @@ export default function LearnerDetailPage() {
   const unjustifiedDays = new Set(unjustifiedAbsences.map((r: any) => r.session?.date?.split('T')[0])).size;
 
   // Radar chart data for sprint evaluations
-  const radarData = sprintEvals.slice(0, 8).map((e: any) => ({
-    sprint: e.sprintPhase?.title?.replace(/Sprint\s*/i, 'S').slice(0, 12) || `S${e.sprintPhase?.orderIndex + 1}`,
+  const radarData = (sprintEvals || []).slice(0, 8).map((e: any) => ({
+    sprint: e.sprintPhase?.title?.replace(/Sprint\s*/i, 'S').slice(0, 12) || `S${(e.sprintPhase?.orderIndex || 0) + 1}`,
     niveau: e.masteryLevel,
   }));
 
@@ -1036,6 +1037,7 @@ export default function LearnerDetailPage() {
                       ))}
                     </select>
                   </div>
+                </div>
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">Taux d&apos;absence manuel (%)</label>
