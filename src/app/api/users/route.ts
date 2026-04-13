@@ -68,7 +68,7 @@ export async function POST(req: Request) {
     console.error(err);
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2021') {
       return NextResponse.json(
-        { error: 'Base de donnees non migree: veuillez executer prisma migrate deploy.' },
+        { error: 'Base de donnees non synchronisee: veuillez executer prisma db push (ou migrate deploy si vos migrations sont PostgreSQL).' },
         { status: 500 }
       );
     }

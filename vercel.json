@@ -1,3 +1,3 @@
 {
-  "buildCommand": "npx prisma migrate deploy && npm run build"
+  "buildCommand": "npx prisma db push && npm run build"
 }
