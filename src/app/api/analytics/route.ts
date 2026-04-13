@@ -226,20 +226,51 @@ export async function GET(req: Request) {
       orderBy: { date: 'asc' }
   });
 
-  const monthlyData: Record<string, { total: number, present: number }> = {};
+  const learnersForTrend = await prisma.learnerProfile.findMany({
+      where: learnerWhere,
+      include: { monthlyPresenceRates: true }
+  });
+
+  const monthlyData: Record<string, { total: number, present: number, manualSum: number, manualCount: number }> = {};
+  
+  // Aggregate real sessions
   allSessions.forEach(s => {
       const monthKey = format(new Date(s.date), 'MM/yyyy');
-      if (!monthlyData[monthKey]) monthlyData[monthKey] = { total: 0, present: 0 };
+      if (!monthlyData[monthKey]) monthlyData[monthKey] = { total: 0, present: 0, manualSum: 0, manualCount: 0 };
       
       const sessionRecords = s.records.filter(r => r.status !== 'NOT_APPLICABLE');
       monthlyData[monthKey].total += sessionRecords.length;
       monthlyData[monthKey].present += sessionRecords.filter(r => r.status === 'PRESENT' || r.status === 'LATE').length;
   });
 
-  const attendanceTrend = Object.entries(monthlyData).map(([name, data]) => ({
-      name,
-      presenceRate: data.total > 0 ? Math.round((data.present / data.total) * 10000) / 100 : 100
-  }));
+  // Aggregate manual overrides
+  learnersForTrend.forEach(l => {
+      l.monthlyPresenceRates.forEach(m => {
+          const monthKey = `${m.month.toString().padStart(2, '0')}/${m.year}`;
+          if (!monthlyData[monthKey]) monthlyData[monthKey] = { total: 0, present: 0, manualSum: 0, manualCount: 0 };
+          monthlyData[monthKey].manualSum += m.presenceRate;
+          monthlyData[monthKey].manualCount += 1;
+      });
+  });
+
+  const attendanceTrend = Object.entries(monthlyData).map(([name, data]) => {
+      let rate = 0;
+      if (data.manualCount > 0) {
+          // If we have manual overrides for this month, they take priority
+          // We use simple average of manual rates for now
+          rate = data.manualSum / data.manualCount;
+      } else {
+          rate = data.total > 0 ? (data.present / data.total) * 100 : 100;
+      }
+      return {
+          name,
+          presenceRate: Math.round(rate * 100) / 100
+      };
+  }).sort((a, b) => { // Sort by date MM/YYYY
+      const [m1, y1] = a.name.split('/').map(Number);
+      const [m2, y2] = b.name.split('/').map(Number);
+      return y1 !== y2 ? y1 - y2 : m1 - m2;
+  });
 
   return NextResponse.json({
     overview: {

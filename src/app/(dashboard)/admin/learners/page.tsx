@@ -43,6 +43,12 @@ export default function LearnersPage() {
   const [editForm, setEditForm] = useState<any>(null);
   const [saving, setSaving] = useState(false);
 
+  // Bulk actions
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showBulkAssign, setShowBulkAssign] = useState(false);
+  const [bulkCohortId, setBulkCohortId] = useState('');
+  const [isBulkSaving, setIsBulkSaving] = useState(false);
+
   const loadOptions = () => {
     fetch('/api/users').then((r) => r.json()).then(setUsers).catch(() => setUsers([]));
     fetch('/api/cohorts').then((r) => r.json()).then(setCohorts).catch(() => setCohorts([]));
@@ -160,6 +166,42 @@ export default function LearnersPage() {
     }
   };
 
+  const handleBulkAssign = async () => {
+    if (!bulkCohortId || selectedIds.length === 0) return;
+    setIsBulkSaving(true);
+    try {
+      const res = await fetch('/api/learners/bulk-assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ learnerIds: selectedIds, cohortId: bulkCohortId }),
+      });
+      if (res.ok) {
+        setShowBulkAssign(false);
+        setSelectedIds([]);
+        setBulkCohortId('');
+        loadLearners();
+      } else {
+        const d = await res.json();
+        alert(d.error || 'Erreur lors de l’assignation groupée');
+      }
+    } finally {
+      setIsBulkSaving(false);
+    }
+  };
+
+  const toggleSelect = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === learners.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(learners.map(l => l.id));
+    }
+  };
+
   return (
     <>
       <div className="page-header">
@@ -167,7 +209,12 @@ export default function LearnersPage() {
           <h1 className="page-title">Apprenants</h1>
           <p className="page-subtitle">Suivi de tous les apprenants</p>
         </div>
-        <div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {selectedIds.length > 0 && (
+            <button className="btn btn-secondary" onClick={() => setShowBulkAssign(true)}>
+              ⚙️ Actions groupées ({selectedIds.length})
+            </button>
+          )}
           <button className="btn btn-primary" onClick={() => setShowAssign(true)}>
             + Assigner a une formation
           </button>
@@ -213,6 +260,9 @@ export default function LearnersPage() {
             <table className="data-table">
               <thead>
                 <tr>
+                  <th style={{ width: 40 }}>
+                    <input type="checkbox" checked={selectedIds.length > 0 && selectedIds.length === learners.length} onChange={toggleSelectAll} />
+                  </th>
                   <th>Nom</th>
                   <th>Email</th>
                   <th>Cohorte</th>
@@ -226,6 +276,9 @@ export default function LearnersPage() {
               <tbody>
                 {learners.map((l: any) => (
                   <tr key={l.id} className="clickable" onClick={() => router.push(`/admin/learners/${l.id}`)}>
+                    <td onClick={(e) => toggleSelect(l.id, e)}>
+                      <input type="checkbox" checked={selectedIds.includes(l.id)} readOnly />
+                    </td>
                     <td style={{ fontWeight: 600 }}>{l.firstName} {l.lastName}</td>
                     <td>{l.email}</td>
                     <td>{l.cohort?.name}</td>
@@ -462,6 +515,34 @@ export default function LearnersPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {showBulkAssign && (
+        <div className="modal-overlay" onClick={() => setShowBulkAssign(false)}>
+          <div className="modal" style={{ maxWidth: 460 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">Assigner les apprenants sélectionnés</h2>
+              <button className="btn btn-ghost btn-icon" onClick={() => setShowBulkAssign(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ marginBottom: 16, fontSize: 13, color: 'var(--text-secondary)' }}>
+                Vous allez assigner <strong>{selectedIds.length} apprenants</strong> à une nouvelle cohorte.
+              </p>
+              <div className="form-group">
+                <label className="form-label">Choisir la cohorte de destination</label>
+                <select className="form-select" value={bulkCohortId} onChange={e => setBulkCohortId(e.target.value)}>
+                   <option value="">Sélectionner...</option>
+                   {cohorts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowBulkAssign(false)}>Annuler</button>
+              <button className="btn btn-primary" disabled={isBulkSaving || !bulkCohortId} onClick={handleBulkAssign}>
+                {isBulkSaving ? 'Assignation...' : `Confirmer l'assignation (${selectedIds.length})`}
+              </button>
+            </div>
           </div>
         </div>
       )}

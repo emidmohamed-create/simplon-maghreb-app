@@ -31,6 +31,7 @@ const TABS = [
   { key: 'attendance', label: '📅 Présences' },
   { key: 'insertion',  label: '💼 Suivi Insertion' },
   { key: 'profile',    label: '👤 Profil' },
+  { key: 'migration',  label: '📥 Migration' },
 ];
 
 const MEETING_TYPES: Record<string, { label: string; color: string; bg: string; icon: string }> = {
@@ -78,15 +79,23 @@ export default function LearnerDetailPage() {
   const [addingAttach,     setAddingAttach]     = useState<string|null>(null);
   const [editingNote,      setEditingNote]      = useState<string|null>(null); // recordId being edited
 
+  // Monthly presence rates (Migration)
+  const [monthlyRates, setMonthlyRates] = useState<any[]>([]);
+  const [showMonthlyRateModal, setShowMonthlyRateModal] = useState(false);
+  const [monthlyRateForm, setMonthlyRateForm] = useState({ year: new Date().getFullYear().toString(), month: (new Date().getMonth() + 1).toString(), presenceRate: '' });
+  const [savingMonthlyRate, setSavingMonthlyRate] = useState(false);
+
   const load = useCallback(() => {
     Promise.all([
       fetch(`/api/learners/${params.id}`).then(r => r.json()),
       fetch(`/api/learners/${params.id}/meetings`).then(r => r.json()).catch(() => []),
       fetch(`/api/learners/${params.id}/justifications`).then(r => r.json()).catch(() => []),
-    ]).then(([l, m, j]) => {
+      fetch(`/api/learners/${params.id}/monthly-presence`).then(r => r.json()).catch(() => []),
+    ]).then(([l, m, j, mr]) => {
       setLearner(l);
       setMeetings(Array.isArray(m) ? m : []);
       setJustifications(Array.isArray(j) ? j : []);
+      setMonthlyRates(Array.isArray(mr) ? mr : []);
     }).finally(() => setLoading(false));
   }, [params.id]);
 
@@ -241,6 +250,33 @@ export default function LearnerDetailPage() {
     } finally {
       setSavingProfile(false);
     }
+  };
+
+  const handleMonthlyRateSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingMonthlyRate(true);
+    try {
+      const res = await fetch(`/api/learners/${params.id}/monthly-presence`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(monthlyRateForm),
+      });
+      if (res.ok) {
+        setShowMonthlyRateModal(false);
+        load();
+      } else {
+        const d = await res.json();
+        alert(d.error || 'Erreur lors de l\'enregistrement');
+      }
+    } finally {
+      setSavingMonthlyRate(false);
+    }
+  };
+
+  const deleteMonthlyRate = async (year: number, month: number) => {
+    if (!confirm('Supprimer cet enregistrement mensuel ?')) return;
+    const res = await fetch(`/api/learners/${params.id}/monthly-presence?year=${year}&month=${month}`, { method: 'DELETE' });
+    if (res.ok) load();
   };
 
 
@@ -961,8 +997,54 @@ export default function LearnerDetailPage() {
             </div>
           </div>
           </div>
+          </div>
+          </div>
+        )}
+
+        {/* ══════════════ TAB: MIGRATION ══════════════ */}
+        {activeTab === 'migration' && (
+          <div className="card">
+            <div className="card-header">
+              <h3 className="card-title">📥 Migration : Taux de présence mensuels manuels</h3>
+              <button className="btn btn-primary" onClick={() => setShowMonthlyRateModal(true)}>+ Ajouter un mois</button>
+            </div>
+            <div className="card-body">
+              <p className="text-muted text-sm mb-4">
+                💡 Ces taux écrasent le calcul automatique basé sur l&apos;appel pour les mois spécifiés. 
+                Utile pour remonter les données d&apos;une ancienne plateforme.
+              </p>
+              
+              {monthlyRates.length === 0 ? (
+                <div className="empty-state">
+                  <p>Aucun taux mensuel manuel enregistré.</p>
+                </div>
+              ) : (
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Période</th>
+                      <th>Taux de présence</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {monthlyRates.map((r: any) => (
+                      <tr key={r.id}>
+                        <td style={{ fontWeight: 600 }}>{r.month.toString().padStart(2, '0')}/{r.year}</td>
+                        <td style={{ color: '#22c55e', fontWeight: 700 }}>{r.presenceRate}%</td>
+                        <td>
+                          <button className="btn btn-ghost btn-sm" style={{ color: '#ef4444' }} onClick={() => deleteMonthlyRate(r.year, r.month)}>🗑️ Supprimer</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
         )}
       </div>
+
 
       {/* ═══ PROFILE MODAL ═══ */}
       {profileModal && profileForm && (
@@ -1261,6 +1343,49 @@ export default function LearnerDetailPage() {
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowJustModal(false)}>Annuler</button>
                 <button type="submit" className="btn btn-primary" disabled={savingJust}>{savingJust ? '⏳...' : '📋 Enregistrer'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* ═══ MODAL: MONTHLY RATE (MIGRATION) ═══ */}
+      {showMonthlyRateModal && (
+        <div className="modal-overlay" onClick={() => setShowMonthlyRateModal(false)}>
+          <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">Ajouter un taux mensuel</h2>
+              <button className="btn btn-ghost btn-icon" onClick={() => setShowMonthlyRateModal(false)}>✕</button>
+            </div>
+            <form onSubmit={handleMonthlyRateSave}>
+              <div className="modal-body">
+                <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+                  <div style={{ flex: 1 }}>
+                    <label className="form-label">Mois</label>
+                    <select className="form-select" value={monthlyRateForm.month} onChange={e => setMonthlyRateForm({ ...monthlyRateForm, month: e.target.value })}>
+                      {Array.from({ length: 12 }).map((_, i) => (
+                        <option key={i + 1} value={i + 1}>{new Date(2000, i).toLocaleString('fr-FR', { month: 'long' })}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label className="form-label">Année</label>
+                    <select className="form-select" value={monthlyRateForm.year} onChange={e => setMonthlyRateForm({ ...monthlyRateForm, year: e.target.value })}>
+                      {[2023, 2024, 2025, 2026].map(y => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Taux de présence (%)</label>
+                  <input type="number" step="0.01" className="form-input" required placeholder="Ex: 95.5" value={monthlyRateForm.presenceRate} onChange={e => setMonthlyRateForm({ ...monthlyRateForm, presenceRate: e.target.value })} />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowMonthlyRateModal(false)}>Annuler</button>
+                <button type="submit" className="btn btn-primary" disabled={savingMonthlyRate}>
+                  {savingMonthlyRate ? 'Enregistrement...' : 'Enregistrer'}
+                </button>
               </div>
             </form>
           </div>

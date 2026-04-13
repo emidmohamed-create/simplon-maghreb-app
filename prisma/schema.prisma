@@ -278,10 +278,26 @@ model LearnerProfile {
   juryBlancEvals        JuryBlancEvaluation[]
   juryBlancRecords      JuryBlancLearnerRecord[]
   meetings              LearnerMeeting[]
+  monthlyPresenceRates  MonthlyPresenceRate[]
   prpeCases             PRPECase[]
   insertionFollowUps    InsertionFollowUp[]
 
   @@map("learner_profiles")
+}
+
+model MonthlyPresenceRate {
+  id           String         @id @default(cuid())
+  learnerId    String         @map("learner_id")
+  year         Int
+  month        Int // 1-12
+  presenceRate Float          @map("presence_rate")
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  learner      LearnerProfile @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+
+  @@unique([learnerId, year, month])
+  @@map("monthly_presence_rates")
 }
 
 model LearnerStatusHistory {
