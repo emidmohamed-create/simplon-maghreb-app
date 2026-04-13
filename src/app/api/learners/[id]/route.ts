@@ -26,12 +26,12 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       insertionFollowUps: { orderBy: { plannedDate: 'asc' } },
       documents: { orderBy: { uploadedAt: 'desc' } },
       statusHistory: {
-        orderBy: { createdAt: 'desc' },
+        orderBy: { effectiveDate: 'desc' },
         include: { changedBy: { select: { firstName: true, lastName: true } } },
       },
       attendanceRecords: {
         include: { session: { select: { date: true, halfDay: true } } },
-        orderBy: { recordedAt: 'desc' },
+        orderBy: { session: { date: 'desc' } },
         take: 50,
       },
       sprintEvaluations: {
@@ -46,11 +46,50 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         },
         orderBy: { phase: { orderIndex: 'asc' } },
       },
+      monthlyPresenceRates: true,
+      meetings: {
+        orderBy: { date: 'desc' },
+        include: { tutor: { select: { firstName: true, lastName: true } } }
+      }
     },
   });
 
   if (!learner) return NextResponse.json({ error: 'Learner not found' }, { status: 404 });
-  return NextResponse.json(learner);
+
+  // --- Calculate Metrics ---
+  
+  // 1. Global Absence Rate
+  let globalAbsenceRate = learner.manualAbsenceRate;
+  if (globalAbsenceRate === null) {
+    if (learner.monthlyPresenceRates.length > 0) {
+      const avgPresence = learner.monthlyPresenceRates.reduce((acc, r) => acc + r.presenceRate, 0) / learner.monthlyPresenceRates.length;
+      globalAbsenceRate = Math.round((100 - avgPresence) * 100) / 100;
+    } else {
+      const attendance = await prisma.attendanceRecord.findMany({ where: { learnerProfileId: params.id } });
+      const expected = attendance.length;
+      const absentCount = attendance.filter(r => r.status === 'ABSENT').length;
+      globalAbsenceRate = expected > 0 ? Math.round((absentCount / expected) * 10000) / 100 : 0;
+    }
+  }
+
+  // 2. Sprint Average
+  const sprintTotal = learner.sprintEvaluations.length;
+  const sprintSum = learner.sprintEvaluations.reduce((acc, e) => acc + (e.rating || 0), 0);
+  const sprintAverage = sprintTotal > 0 ? Math.round((sprintSum / sprintTotal) * 10) / 10 : 0;
+
+  // 3. Fil Rouge Progress
+  const totalPhases = learner.cohort?.filRougeProject?.phases.length || 0;
+  const completedPhases = learner.filRougeSubmissions.filter(s => s.status === 'VALIDATED').length;
+  const filRougeProgress = totalPhases > 0 ? Math.round((completedPhases / totalPhases) * 100) : 0;
+
+  return NextResponse.json({
+    ...learner,
+    globalAbsenceRate,
+    sprintAverage: sprintAverage * 10, // Scale to 100 for radar
+    filRougeProgress,
+    sprintsCount: sprintTotal,
+    attendance: learner.attendanceRecords, // Alias for UI compatibility
+  });
 }
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
