@@ -43,7 +43,7 @@ export default function AttendancePage() {
   const [addingDoc,   setAddingDoc]   = useState(false);
   const [newDocForm,  setNewDocForm]  = useState<Record<string, { url: string; name: string }>>({});
 
-  // â”€â”€â”€ Load session â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Load session
   const loadSession = useCallback(() => {
     setLoading(true);
     Promise.all([
@@ -74,7 +74,7 @@ export default function AttendancePage() {
 
   useEffect(() => { loadSession(); }, [loadSession]);
 
-  // â”€â”€â”€ Attendance handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Attendance handlers
   const updateStatus = (learnerId: string, status: AttendanceStatus) => {
     setRecords(prev => ({
       ...prev,
@@ -112,7 +112,7 @@ export default function AttendancePage() {
     setSaved(true);
   };
 
-  // â”€â”€â”€ Justification modal logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Justification modal logic
   const openJustModal = async (learnerId: string, learnerName: string) => {
     setJustModal({ learnerId, learnerName });
     setJustForm(EMPTY_JUST);
@@ -197,7 +197,7 @@ export default function AttendancePage() {
     setJustList(await res.json());
   };
 
-  // â”€â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Render
   if (loading && !cohort) return <div className="page-body"><div className="loading-overlay"><span className="loading-spinner" /> Chargement...</div></div>;
 
   const activeLearners = cohort?.learnerProfiles?.filter((l: any) => l.statusCurrent === 'IN_TRAINING') || [];
@@ -211,7 +211,7 @@ export default function AttendancePage() {
 
   return (
     <>
-      {/* â•â•â• HEADER â•â•â• */}
+      {/* HEADER */}
       <div className="page-header">
         <div>
           <div className="breadcrumbs">
@@ -291,7 +291,7 @@ export default function AttendancePage() {
                     )}
                   </div>
 
-                  {/* Comment input â€” always visible */}
+                  {/* Comment input - always visible */}
                   <div style={{ flex: 1.2, minWidth: 180 }}>
                     <input className="form-input" style={{ fontSize: 12, padding: '5px 10px', background: 'var(--bg-secondary)' }}
                       placeholder="Commentaire..."
@@ -300,7 +300,7 @@ export default function AttendancePage() {
                     />
                   </div>
 
-                  {/* Justification button â€” shown for absent/justified */}
+                  {/* Justification button - shown for absent/justified */}
                   {isAbsent && (
                     <button
                       className="btn btn-sm btn-secondary"
@@ -318,7 +318,7 @@ export default function AttendancePage() {
         </div>
       </div>
 
-      {/* â•â•â• JUSTIFICATION MODAL â•â•â• */}
+      {/* JUSTIFICATION MODAL */}
       {justModal && (
         <div className="modal-overlay" onClick={() => setJustModal(null)}>
           <div className="modal" style={{ maxWidth: 640, maxHeight: '90vh', overflow: 'auto' }} onClick={e => e.stopPropagation()}>
@@ -328,7 +328,7 @@ export default function AttendancePage() {
             </div>
 
             <div className="modal-body">
-              {/* â”€â”€ Existing justifications â”€â”€ */}
+              {/* Existing justifications */}
               {justList.length > 0 && (
                 <div style={{ marginBottom: 20 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, color: 'var(--text-primary)' }}>
@@ -401,7 +401,7 @@ export default function AttendancePage() {
                 </div>
               )}
 
-              {/* â”€â”€ Create new justification â”€â”€ */}
+              {/* Create new justification */}
               <div style={{ borderTop: justList.length > 0 ? '2px dashed var(--border)' : 'none', paddingTop: justList.length > 0 ? 20 : 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, color: 'var(--text-primary)' }}>
                   {justList.length === 0 ? 'Ajouter un justificatif' : '+ Nouveau justificatif'}

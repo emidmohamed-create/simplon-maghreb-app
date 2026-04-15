@@ -12,7 +12,7 @@ export async function GET(req: Request) {
   const halfDay = searchParams.get('halfDay');
 
   if (!cohortId) {
-    return NextResponse.json({ error: 'cohortId requis' }, { status: 400 });
+    return NextResponse.json({ error: 'Donn?es incompl?tes' }, { status: 400 });
   }
 
   const where: any = { cohortId };
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
   const { cohortId, date, halfDay, records } = body;
 
   if (!cohortId || !date || !halfDay || !records?.length) {
-    return NextResponse.json({ error: 'DonnÃ©es incomplÃ¨tes' }, { status: 400 });
+    return NextResponse.json({ error: 'Donn?es incompl?tes' }, { status: 400 });
   }
 
   const allowedStatuses = new Set(['PRESENT', 'ABSENT', 'JUSTIFIED_ABSENT', 'LATE', 'NOT_APPLICABLE']);
@@ -105,3 +105,4 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ success: true, sessionId: session.id });
 }
+

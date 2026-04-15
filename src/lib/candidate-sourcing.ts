@@ -1,4 +1,4 @@
-export type SourcingCriteriaKey =
+﻿export type SourcingCriteriaKey =
   | 'motivation'
   | 'technique'
   | 'communication'
@@ -33,9 +33,9 @@ export const SOURCE_CHANNEL_OPTIONS = [
   'Bouche-à-oreille',
   'Campus',
   'Autre',
-];
+] as const;
 
-export const ACADEMIC_LEVEL_OPTIONS = ['Bac', 'Bac+2', 'Bac+3', 'Bac+4', 'Bac+5', 'Doctorat'];
+export const ACADEMIC_LEVEL_OPTIONS = ['Bac', 'Bac+2', 'Bac+3', 'Bac+4', 'Bac+5', 'Doctorat'] as const;
 
 export const SOURCING_CRITERIA_GROUPS: SourcingCriteriaGroup[] = [
   {
@@ -102,7 +102,7 @@ export const SOURCING_SCORE_OPTIONS = [
   { value: 3, label: '3 - Correct' },
   { value: 4, label: '4 - Bon' },
   { value: 5, label: '5 - Excellent' },
-];
+] as const;
 
 export const SOURCING_RECOMMENDATION_OPTIONS = [
   {
@@ -249,4 +249,3 @@ export function getSourcingRecommendationMeta(recommendation: SourcingRecommenda
       };
   }
 }
-
