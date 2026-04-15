@@ -91,6 +91,8 @@ export const STATUS_LABELS: Record<string, string> = {
   CONTACTED: 'Contacté',
   EVALUATED: 'Évalué',
   QUALIFIED: 'Qualifié',
+  SELECTED: 'Sélectionné',
+  WAITLIST: 'Liste d\'attente',
   CONVERTED: 'Converti',
   PRESENT: 'Présent',
   ABSENT: 'Absent',

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { STATUS_LABELS } from '@/lib/utils';
+import { SOURCE_CHANNEL_OPTIONS, getSourcingRecommendationMeta } from '@/lib/candidate-sourcing';
 
 const STAGE_COLORS: Record<string, string> = {
   NEW: 'badge-gray', CONTACTED: 'badge-blue', EVALUATED: 'badge-orange',
@@ -84,7 +85,15 @@ export default function CandidatesPage() {
                     <td>{c.phone || '-'}</td>
                     <td>{c.sourceChannel || '-'}</td>
                     <td>{c.academicLevel || '-'}</td>
-                    <td>{c.evaluations?.[0]?.score ? Math.round(c.evaluations[0].score) + '/100' : '-'}</td>
+                    <td>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <span>{c.evaluations?.[0]?.score ? Math.round(c.evaluations[0].score) + '/100' : '-'}</span>
+                        {c.evaluations?.[0]?.recommendation && (() => {
+                          const meta = getSourcingRecommendationMeta(c.evaluations[0].recommendation);
+                          return <span className={`badge ${meta.badgeClass}`} style={{ fontSize: 10, alignSelf: 'flex-start' }}>{meta.label}</span>;
+                        })()}
+                      </div>
+                    </td>
                     <td><span className={`badge ${STAGE_COLORS[c.currentStage] || 'badge-gray'}`}>{STATUS_LABELS[c.currentStage] || c.currentStage}</span></td>
                     <td>
                       {c.currentStage !== 'CONVERTED' && c.currentStage !== 'REJECTED' && (
@@ -115,7 +124,13 @@ export default function CandidatesPage() {
                 <div className="form-group"><label className="form-label">Email</label><input type="email" className="form-input" value={form.email} onChange={e => setForm({...form, email: e.target.value})} required /></div>
                 <div className="form-row">
                   <div className="form-group"><label className="form-label">Téléphone</label><input className="form-input" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} /></div>
-                  <div className="form-group"><label className="form-label">Source</label><input className="form-input" placeholder="Site web, Facebook..." value={form.sourceChannel} onChange={e => setForm({...form, sourceChannel: e.target.value})} /></div>
+                  <div className="form-group">
+                    <label className="form-label">Source</label>
+                    <select className="form-select" value={form.sourceChannel} onChange={e => setForm({...form, sourceChannel: e.target.value})}>
+                      <option value="">Non précisé</option>
+                      {SOURCE_CHANNEL_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
+                    </select>
+                  </div>
                 </div>
               </div>
               <div className="modal-footer"><button type="button" className="btn btn-secondary" onClick={() => setShowCreate(false)}>Annuler</button><button type="submit" className="btn btn-primary">Créer</button></div>
