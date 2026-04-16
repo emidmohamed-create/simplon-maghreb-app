@@ -66,6 +66,7 @@ model User {
   sourcingJuryAssignments SourcingSessionJury[]        @relation("SourcingJuryUser")
   sourcingSectionEvals    SourcingSectionEvaluation[]  @relation("SourcingSectionEvaluator")
   sourcingDecisions       SourcingSessionCandidate[]   @relation("SourcingDecisionMaker")
+  sourcingStartedInterviews SourcingSessionCandidate[] @relation("SourcingInterviewStarter")
   statusChanges          LearnerStatusHistory[]        @relation("ChangedBy")
   uploadedDocuments      Document[]                    @relation("UploadedBy")
   createdCalendars       TrainingCalendar[]            @relation("CalendarCreator")
@@ -306,6 +307,11 @@ model SourcingSessionCandidate {
   checkInStatus String    @default("INVITED") @map("check_in_status") // INVITED | CONFIRMED | PRESENT | NO_SHOW | CANCELLED
   timeSlot      String?   @map("time_slot")
   groupName     String?   @map("group_name")
+  interviewStatus       String    @default("WAITING") @map("interview_status") // WAITING | IN_PROGRESS | DONE
+  interviewCommitteeKey String?   @map("interview_committee_key")
+  interviewStartedById  String?   @map("interview_started_by")
+  interviewStartedAt    DateTime? @map("interview_started_at")
+  interviewEndedAt      DateTime? @map("interview_ended_at")
   finalScore    Float?    @map("final_score")
   finalDecision String?   @map("final_decision") // QUALIFIED | WAITLIST | REJECTED | ABSENT | PENDING
   finalComment  String?   @map("final_comment")
@@ -317,10 +323,12 @@ model SourcingSessionCandidate {
   session   SourcingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   candidate Candidate       @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   decidedBy User?           @relation("SourcingDecisionMaker", fields: [decidedById], references: [id])
+  interviewStartedBy User?  @relation("SourcingInterviewStarter", fields: [interviewStartedById], references: [id])
 
   evaluations SourcingSectionEvaluation[]
 
   @@unique([sessionId, candidateId])
+  @@index([sessionId, interviewStatus])
   @@map("sourcing_session_candidates")
 }
 
@@ -329,6 +337,7 @@ model SourcingSessionJury {
   sessionId   String   @map("session_id")
   userId      String   @map("user_id")
   section     String // ADMIN_MOTIVATION | TECHNICAL | SERIOUS_GAME | FINAL_COMMITTEE
+  committeeKey String? @map("committee_key")
   role        String   @default("JURY")
   canFinalize Boolean  @default(false) @map("can_finalize")
   createdAt   DateTime @default(now()) @map("created_at")

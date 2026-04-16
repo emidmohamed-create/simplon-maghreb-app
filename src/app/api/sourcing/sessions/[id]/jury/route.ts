@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ADMIN_ROLES, requireAuth } from '@/lib/rbac';
 import { canAccessSourcingSession } from '@/lib/sourcing-access';
+import { normalizeCommitteeKey } from '@/lib/sourcing-session';
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const { error, user } = await requireAuth(ADMIN_ROLES);
@@ -28,10 +29,12 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   try {
     const body = await req.json();
-    const { userId, section, role, canFinalize } = body;
+    const { userId, section, role, canFinalize, committeeKey } = body;
     if (!userId || !section) {
       return NextResponse.json({ error: 'Utilisateur et section requis' }, { status: 400 });
     }
+
+    const normalizedCommitteeKey = section === 'FINAL_COMMITTEE' ? null : normalizeCommitteeKey(committeeKey);
 
     const member = await prisma.sourcingSessionJury.upsert({
       where: { sessionId_userId_section: { sessionId: params.id, userId, section } },
@@ -39,10 +42,12 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         sessionId: params.id,
         userId,
         section,
+        committeeKey: normalizedCommitteeKey,
         role: role || 'JURY',
         canFinalize: Boolean(canFinalize),
       },
       update: {
+        committeeKey: normalizedCommitteeKey,
         role: role || 'JURY',
         canFinalize: Boolean(canFinalize),
       },

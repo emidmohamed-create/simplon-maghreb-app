@@ -29,12 +29,13 @@ const sessionInclude = {
         },
       },
       decidedBy: { select: { id: true, firstName: true, lastName: true } },
+      interviewStartedBy: { select: { id: true, firstName: true, lastName: true } },
       evaluations: {
         include: { evaluator: { select: { id: true, firstName: true, lastName: true } } },
         orderBy: [{ section: 'asc' }, { updatedAt: 'desc' }],
       },
     },
-    orderBy: [{ groupName: 'asc' }, { timeSlot: 'asc' }, { createdAt: 'asc' }],
+    orderBy: [{ interviewStatus: 'asc' }, { groupName: 'asc' }, { timeSlot: 'asc' }, { createdAt: 'asc' }],
   },
 } satisfies Prisma.SourcingSessionInclude;
 
@@ -51,7 +52,29 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   });
 
   if (!session) return NextResponse.json({ error: 'Session introuvable' }, { status: 404 });
-  return NextResponse.json(session);
+
+  const currentUserCommitteeKeys = Array.from(new Set(
+    session.juryMembers
+      .filter((member) => member.user.id === user!.id && member.committeeKey)
+      .map((member) => member.committeeKey as string),
+  ));
+  const isAdminRole = ADMIN_ROLES.includes(user!.role as any);
+  const isCommitteeScoped = !isAdminRole && currentUserCommitteeKeys.length > 0;
+
+  const responseSession = {
+    ...session,
+    currentUserCommitteeKeys,
+    isCommitteeScoped,
+    candidates: isCommitteeScoped
+      ? session.candidates.filter((row) => (
+          !row.interviewCommitteeKey
+          || currentUserCommitteeKeys.includes(row.interviewCommitteeKey)
+          || row.interviewStatus === 'WAITING'
+        ))
+      : session.candidates,
+  };
+
+  return NextResponse.json(responseSession);
 }
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {

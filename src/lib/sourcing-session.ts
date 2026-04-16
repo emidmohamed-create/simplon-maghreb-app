@@ -167,6 +167,19 @@ export const SOURCING_CHECKIN_OPTIONS = [
   { value: 'CANCELLED', label: 'Annulé', badgeClass: 'badge-gray' },
 ] as const;
 
+export const DEFAULT_SOURCING_COMMITTEE = 'COMITE-1';
+
+export const SOURCING_INTERVIEW_STATUS_OPTIONS = [
+  { value: 'WAITING', label: 'En attente', badgeClass: 'badge-gray' },
+  { value: 'IN_PROGRESS', label: 'En entretien', badgeClass: 'badge-orange' },
+  { value: 'DONE', label: 'Entretien termine', badgeClass: 'badge-green' },
+] as const;
+
+export function normalizeCommitteeKey(value: string | null | undefined) {
+  const trimmed = (value || '').trim();
+  return trimmed || DEFAULT_SOURCING_COMMITTEE;
+}
+
 export function getSourcingSection(section: string | null | undefined) {
   return SOURCING_SECTIONS.find((item) => item.key === section) || SOURCING_SECTIONS[0];
 }
@@ -259,6 +272,10 @@ export function getSourcingDecisionMeta(decision: string | null | undefined) {
 
 export function getCheckInMeta(status: string | null | undefined) {
   return SOURCING_CHECKIN_OPTIONS.find((item) => item.value === status) || SOURCING_CHECKIN_OPTIONS[0];
+}
+
+export function getInterviewStatusMeta(status: string | null | undefined) {
+  return SOURCING_INTERVIEW_STATUS_OPTIONS.find((item) => item.value === status) || SOURCING_INTERVIEW_STATUS_OPTIONS[0];
 }
 
 export function decisionToCandidateStage(decision: string | null | undefined) {

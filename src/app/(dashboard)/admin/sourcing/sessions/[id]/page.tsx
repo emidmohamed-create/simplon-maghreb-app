@@ -8,12 +8,15 @@ import {
   SOURCING_RECOMMENDATION_OPTIONS,
   SOURCING_SCORE_OPTIONS,
   SOURCING_SECTIONS,
+  DEFAULT_SOURCING_COMMITTEE,
   createDefaultSectionCriteria,
   computeFinalSourcingScore,
   computeSectionScore,
   getCheckInMeta,
+  getInterviewStatusMeta,
   getSourcingDecisionMeta,
   getSourcingSection,
+  normalizeCommitteeKey,
   parseSectionCriteria,
   suggestSectionRecommendation,
 } from '@/lib/sourcing-session';
@@ -43,7 +46,8 @@ export default function SourcingSessionDetailPage() {
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([]);
   const [showAddCandidates, setShowAddCandidates] = useState(false);
   const [showAddJury, setShowAddJury] = useState(false);
-  const [juryForm, setJuryForm] = useState({ userId: '', section: 'ADMIN_MOTIVATION', canFinalize: false });
+  const [activeCommitteeKey, setActiveCommitteeKey] = useState(DEFAULT_SOURCING_COMMITTEE);
+  const [juryForm, setJuryForm] = useState({ userId: '', section: 'ADMIN_MOTIVATION', committeeKey: DEFAULT_SOURCING_COMMITTEE, canFinalize: false });
   const [evaluationTarget, setEvaluationTarget] = useState<any>(null);
   const [decisionTarget, setDecisionTarget] = useState<any>(null);
   const [saving, setSaving] = useState(false);
@@ -79,12 +83,41 @@ export default function SourcingSessionDetailPage() {
   );
   const availableCandidates = candidates.filter((candidate) => !assignedCandidateIds.has(candidate.id));
 
+  const committeeKeys = useMemo<string[]>(() => {
+    if (session?.isCommitteeScoped && session?.currentUserCommitteeKeys?.length) {
+      return session.currentUserCommitteeKeys as string[];
+    }
+
+    const keys = Array.from(new Set(
+      [
+        ...(session?.juryMembers || []).map((member: any) => member.committeeKey),
+        ...(session?.candidates || []).map((row: any) => row.interviewCommitteeKey),
+      ].filter(Boolean),
+    )) as string[];
+    return keys.length ? keys : [DEFAULT_SOURCING_COMMITTEE];
+  }, [session]);
+
+  useEffect(() => {
+    if (!committeeKeys.includes(activeCommitteeKey)) {
+      setActiveCommitteeKey(committeeKeys[0] || DEFAULT_SOURCING_COMMITTEE);
+    }
+  }, [committeeKeys, activeCommitteeKey]);
+
+  const displayedCandidates = useMemo(() => {
+    const rows = session?.candidates || [];
+    return rows.filter((row: any) => {
+      if (!row.interviewCommitteeKey || row.interviewCommitteeKey === activeCommitteeKey) return true;
+      return row.interviewStatus === 'WAITING';
+    });
+  }, [session, activeCommitteeKey]);
+
   const stats = useMemo(() => {
     const rows = session?.candidates || [];
     const decided = rows.filter((row: any) => row.finalDecision && row.finalDecision !== 'PENDING').length;
     const present = rows.filter((row: any) => row.checkInStatus === 'PRESENT').length;
     const incomplete = rows.filter((row: any) => SOURCING_SECTIONS.some((section) => !row.evaluations?.some((ev: any) => ev.section === section.key && ev.status === 'SUBMITTED'))).length;
-    return { total: rows.length, decided, present, incomplete };
+    const inProgress = rows.filter((row: any) => row.interviewStatus === 'IN_PROGRESS').length;
+    return { total: rows.length, decided, present, incomplete, inProgress };
   }, [session]);
 
   const openEvaluation = (row: any, sectionKey: string) => {
@@ -138,7 +171,7 @@ export default function SourcingSessionDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(juryForm),
       });
-      setJuryForm({ userId: '', section: 'ADMIN_MOTIVATION', canFinalize: false });
+      setJuryForm({ userId: '', section: 'ADMIN_MOTIVATION', committeeKey: activeCommitteeKey, canFinalize: false });
       setShowAddJury(false);
       load();
     } finally {
@@ -153,6 +186,27 @@ export default function SourcingSessionDetailPage() {
       body: JSON.stringify({ checkInStatus }),
     });
     load();
+  };
+
+  const handleInterviewAction = async (row: any, interviewAction: 'START' | 'FINISH' | 'RELEASE') => {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/sourcing/sessions/${sessionId}/candidates/${row.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          interviewAction,
+          committeeKey: normalizeCommitteeKey(activeCommitteeKey),
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'Action impossible sur cet entretien');
+      }
+      load();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleEvaluationSubmit = async (status: 'DRAFT' | 'SUBMITTED') => {
@@ -227,6 +281,7 @@ export default function SourcingSessionDetailPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 16 }}>
           <Metric label="Candidats" value={stats.total} />
           <Metric label="Présents" value={stats.present} tone="green" />
+          <Metric label="En entretien" value={stats.inProgress} tone="orange" />
           <Metric label="Incomplets" value={stats.incomplete} tone="orange" />
           <Metric label="Décidés" value={stats.decided} tone="blue" />
         </div>
@@ -239,22 +294,39 @@ export default function SourcingSessionDetailPage() {
 
         {activeTab === 'overview' && (
           <div className="card">
+            <div className="card-body" style={{ borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div>
+                <h3 className="card-title" style={{ margin: 0 }}>File d'entretien</h3>
+                <p className="text-muted" style={{ margin: '4px 0 0', fontSize: 13 }}>
+                  Un candidat demarre par un comite est masque pour les autres comites actifs.
+                </p>
+              </div>
+              <div style={{ minWidth: 240 }}>
+                <label className="form-label">Comite actif</label>
+                <select className="form-select" value={activeCommitteeKey} onChange={(e) => setActiveCommitteeKey(e.target.value)}>
+                  {committeeKeys.map((key) => <option key={key} value={key}>{key}</option>)}
+                </select>
+              </div>
+            </div>
             <table className="data-table">
               <thead>
                 <tr>
                   <th>Candidat</th>
                   <th>Check-in</th>
+                  <th>Entretien</th>
                   {SOURCING_SECTIONS.map((section) => <th key={section.key}>{section.shortLabel}</th>)}
                   <th>Final</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {session.candidates.length === 0 && (
-                  <tr><td colSpan={7} style={{ textAlign: 'center', padding: 24, color: 'var(--text-muted)' }}>Aucun candidat affecté à cette session.</td></tr>
+                {displayedCandidates.length === 0 && (
+                  <tr><td colSpan={8} style={{ textAlign: 'center', padding: 24, color: 'var(--text-muted)' }}>Aucun candidat disponible pour ce comite.</td></tr>
                 )}
-                {session.candidates.map((row: any) => {
+                {displayedCandidates.map((row: any) => {
                   const checkMeta = getCheckInMeta(row.checkInStatus);
+                  const interviewMeta = getInterviewStatusMeta(row.interviewStatus);
+                  const isCurrentCommittee = row.interviewCommitteeKey === activeCommitteeKey;
                   const finalMeta = getSourcingDecisionMeta(row.finalDecision);
                   const submittedEvaluations = (row.evaluations || []).filter((ev: any) => ev.status === 'SUBMITTED');
                   const finalScore = row.finalScore ?? computeFinalSourcingScore(submittedEvaluations);
@@ -269,6 +341,20 @@ export default function SourcingSessionDetailPage() {
                           {SOURCING_CHECKIN_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                         </select>
                         <span className={`badge ${checkMeta.badgeClass}`} style={{ marginTop: 6 }}>{checkMeta.label}</span>
+                      </td>
+                      <td>
+                        <div style={{ display: 'grid', gap: 6, minWidth: 160 }}>
+                          <span className={`badge ${interviewMeta.badgeClass}`}>{interviewMeta.label}</span>
+                          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                            {row.interviewCommitteeKey || 'Non attribue'}
+                            {row.interviewCommitteeKey && isCurrentCommittee ? ' (ce comite)' : ''}
+                          </span>
+                          {row.interviewStartedBy && (
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                              Par {row.interviewStartedBy.firstName} {row.interviewStartedBy.lastName}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       {SOURCING_SECTIONS.map((section) => {
                         const evaluation = row.evaluations?.find((ev: any) => ev.section === section.key);
@@ -297,6 +383,16 @@ export default function SourcingSessionDetailPage() {
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          {row.interviewStatus === 'IN_PROGRESS' && isCurrentCommittee ? (
+                            <>
+                              <button className="btn btn-sm btn-primary" disabled={saving} onClick={() => handleInterviewAction(row, 'FINISH')}>Terminer</button>
+                              <button className="btn btn-sm btn-secondary" disabled={saving} onClick={() => handleInterviewAction(row, 'RELEASE')}>Liberer</button>
+                            </>
+                          ) : (
+                            <button className="btn btn-sm btn-primary" disabled={saving} onClick={() => handleInterviewAction(row, 'START')}>
+                              {row.interviewStatus === 'DONE' ? 'Reprendre' : 'Demarrer'}
+                            </button>
+                          )}
                           {SOURCING_SECTIONS.map((section) => (
                             <button key={section.key} className="btn btn-sm btn-secondary" onClick={() => openEvaluation(row, section.key)}>{section.shortLabel}</button>
                           ))}
@@ -330,6 +426,7 @@ export default function SourcingSessionDetailPage() {
                           <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{member.user.email}</div>
                         </div>
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          {member.committeeKey && <span className="badge badge-gray">{member.committeeKey}</span>}
                           <span className="badge badge-blue">{section.label}</span>
                           {member.canFinalize && <span className="badge badge-green">Décision finale</span>}
                         </div>
@@ -443,10 +540,29 @@ export default function SourcingSessionDetailPage() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Section</label>
-                  <select className="form-select" value={juryForm.section} onChange={(e) => setJuryForm({ ...juryForm, section: e.target.value, canFinalize: e.target.value === 'FINAL_COMMITTEE' })}>
+                  <select className="form-select" value={juryForm.section} onChange={(e) => setJuryForm({
+                    ...juryForm,
+                    section: e.target.value,
+                    committeeKey: e.target.value === 'FINAL_COMMITTEE' ? '' : (juryForm.committeeKey || activeCommitteeKey),
+                    canFinalize: e.target.value === 'FINAL_COMMITTEE',
+                  })}>
                     {JURY_SECTIONS.map((section) => <option key={section.value} value={section.value}>{section.label}</option>)}
                   </select>
                 </div>
+                {juryForm.section !== 'FINAL_COMMITTEE' && (
+                  <div className="form-group">
+                    <label className="form-label">Comite / salle</label>
+                    <input
+                      className="form-input"
+                      value={juryForm.committeeKey}
+                      onChange={(e) => setJuryForm({ ...juryForm, committeeKey: e.target.value })}
+                      placeholder="Ex: COMITE-1, Salle A"
+                    />
+                    <p className="text-muted" style={{ margin: '6px 0 0', fontSize: 12 }}>
+                      Mets le meme comite pour le jury admin/motivation et le jury technique qui travaillent ensemble.
+                    </p>
+                  </div>
+                )}
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <input type="checkbox" checked={juryForm.canFinalize} onChange={(e) => setJuryForm({ ...juryForm, canFinalize: e.target.checked })} />
                   Peut valider les décisions finales

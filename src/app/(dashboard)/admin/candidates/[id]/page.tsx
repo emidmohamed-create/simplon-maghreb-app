@@ -21,6 +21,7 @@ import {
   SOURCING_SECTIONS as SESSION_SOURCING_SECTIONS,
   computeFinalSourcingScore,
   getCheckInMeta,
+  getInterviewStatusMeta,
   getSourcingDecisionMeta as getSessionDecisionMeta,
   getSourcingSection,
 } from '@/lib/sourcing-session';
@@ -481,6 +482,7 @@ export default function CandidateDetailPage() {
                   const finalScore = row.finalScore ?? computeFinalSourcingScore(submitted);
                   const finalMeta = getSessionDecisionMeta(row.finalDecision);
                   const checkMeta = getCheckInMeta(row.checkInStatus);
+                  const interviewMeta = getInterviewStatusMeta(row.interviewStatus);
                   return (
                     <div key={row.id} className="card">
                       <div className="card-header">
@@ -495,6 +497,7 @@ export default function CandidateDetailPage() {
                         </div>
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                           <span className={`badge ${checkMeta.badgeClass}`}>{checkMeta.label}</span>
+                          <span className={`badge ${interviewMeta.badgeClass}`}>{row.interviewCommitteeKey ? `${interviewMeta.label} - ${row.interviewCommitteeKey}` : interviewMeta.label}</span>
                           <span className={`badge ${finalMeta.badgeClass}`}>{finalMeta.label}</span>
                           <span className="badge badge-blue">{typeof finalScore === 'number' ? `${Math.round(finalScore)}/100` : 'Score en attente'}</span>
                         </div>
