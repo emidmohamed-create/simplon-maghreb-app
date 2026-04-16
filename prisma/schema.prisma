@@ -62,6 +62,10 @@ model User {
   trainerCohorts         Cohort[]                      @relation("TrainerCohorts")
   learnerProfiles        LearnerProfile[]
   sourcingEvaluations    SourcingEvaluation[]          @relation("Evaluator")
+  createdSourcingSessions SourcingSession[]            @relation("SourcingSessionCreator")
+  sourcingJuryAssignments SourcingSessionJury[]        @relation("SourcingJuryUser")
+  sourcingSectionEvals    SourcingSectionEvaluation[]  @relation("SourcingSectionEvaluator")
+  sourcingDecisions       SourcingSessionCandidate[]   @relation("SourcingDecisionMaker")
   statusChanges          LearnerStatusHistory[]        @relation("ChangedBy")
   uploadedDocuments      Document[]                    @relation("UploadedBy")
   createdCalendars       TrainingCalendar[]            @relation("CalendarCreator")
@@ -126,6 +130,7 @@ model Project {
   candidates   Candidate[]
   projectPlans ProjectPlan[]
   userAccesses UserProjectAccess[]
+  sourcingSessions SourcingSession[] @relation("SourcingSessionProject")
 
   @@map("projects")
 }
@@ -142,6 +147,7 @@ model Campus {
   candidates Candidate[]
   calendars  TrainingCalendar[] @relation("CampusCalendars")
   phases     TimelinePhase[]    @relation("PhaseCampus")
+  sourcingSessions SourcingSession[] @relation("SourcingSessionCampus")
 
   @@map("campuses")
 }
@@ -186,6 +192,7 @@ model Cohort {
   filRougeProject       FilRougeProject?
   juryBlancSessions     JuryBlancSession[]
   userAccesses          UserCohortAccess[]
+  sourcingSessions      SourcingSession[]              @relation("SourcingSessionCohort")
 
   @@map("cohorts")
 }
@@ -244,6 +251,7 @@ model Candidate {
   project Project? @relation(fields: [projectId], references: [id])
 
   evaluations     SourcingEvaluation[]
+  sourcingSessions SourcingSessionCandidate[]
   learnerProfiles LearnerProfile[]
 
   @@map("candidates")
@@ -264,6 +272,96 @@ model SourcingEvaluation {
   evaluator User      @relation("Evaluator", fields: [evaluatorId], references: [id])
 
   @@map("sourcing_evaluations")
+}
+
+model SourcingSession {
+  id          String    @id @default(cuid())
+  name        String
+  date        DateTime?
+  location    String?
+  status      String    @default("DRAFT") // DRAFT | OPEN | IN_PROGRESS | CLOSED | DECIDED | ARCHIVED
+  campusId    String?   @map("campus_id")
+  projectId   String?   @map("project_id")
+  cohortId    String?   @map("cohort_id")
+  createdById String    @map("created_by")
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  campus    Campus? @relation("SourcingSessionCampus", fields: [campusId], references: [id])
+  project   Project? @relation("SourcingSessionProject", fields: [projectId], references: [id])
+  cohort    Cohort? @relation("SourcingSessionCohort", fields: [cohortId], references: [id])
+  createdBy User   @relation("SourcingSessionCreator", fields: [createdById], references: [id])
+
+  candidates  SourcingSessionCandidate[]
+  juryMembers SourcingSessionJury[]
+
+  @@map("sourcing_sessions")
+}
+
+model SourcingSessionCandidate {
+  id            String    @id @default(cuid())
+  sessionId     String    @map("session_id")
+  candidateId   String    @map("candidate_id")
+  checkInStatus String    @default("INVITED") @map("check_in_status") // INVITED | CONFIRMED | PRESENT | NO_SHOW | CANCELLED
+  timeSlot      String?   @map("time_slot")
+  groupName     String?   @map("group_name")
+  finalScore    Float?    @map("final_score")
+  finalDecision String?   @map("final_decision") // QUALIFIED | WAITLIST | REJECTED | ABSENT | PENDING
+  finalComment  String?   @map("final_comment")
+  decidedById   String?   @map("decided_by")
+  decidedAt     DateTime? @map("decided_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  session   SourcingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  candidate Candidate       @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  decidedBy User?           @relation("SourcingDecisionMaker", fields: [decidedById], references: [id])
+
+  evaluations SourcingSectionEvaluation[]
+
+  @@unique([sessionId, candidateId])
+  @@map("sourcing_session_candidates")
+}
+
+model SourcingSessionJury {
+  id          String   @id @default(cuid())
+  sessionId   String   @map("session_id")
+  userId      String   @map("user_id")
+  section     String // ADMIN_MOTIVATION | TECHNICAL | SERIOUS_GAME | FINAL_COMMITTEE
+  role        String   @default("JURY")
+  canFinalize Boolean  @default(false) @map("can_finalize")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  session SourcingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User            @relation("SourcingJuryUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId, section])
+  @@map("sourcing_session_juries")
+}
+
+model SourcingSectionEvaluation {
+  id                 String    @id @default(cuid())
+  sessionCandidateId String    @map("session_candidate_id")
+  evaluatorId        String    @map("evaluator_id")
+  section            String // ADMIN_MOTIVATION | TECHNICAL | SERIOUS_GAME
+  status             String    @default("DRAFT") // DRAFT | SUBMITTED
+  score              Float?
+  recommendation     String? // QUALIFIED | WAITLIST | REJECTED | PENDING
+  comment            String?
+  strengths          String?
+  risks              String?
+  needsFollowUp      String?   @map("needs_follow_up")
+  criteriaJson       String?   @map("criteria_json")
+  submittedAt        DateTime? @map("submitted_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  sessionCandidate SourcingSessionCandidate @relation(fields: [sessionCandidateId], references: [id], onDelete: Cascade)
+  evaluator        User                      @relation("SourcingSectionEvaluator", fields: [evaluatorId], references: [id])
+
+  @@unique([sessionCandidateId, evaluatorId, section])
+  @@map("sourcing_section_evaluations")
 }
 
 // ============================================================

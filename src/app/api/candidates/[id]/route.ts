@@ -15,6 +15,26 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         include: { evaluator: { select: { firstName: true, lastName: true } } },
         orderBy: { evaluationDate: 'desc' },
       },
+      sourcingSessions: {
+        include: {
+          session: {
+            select: {
+              id: true,
+              name: true,
+              date: true,
+              status: true,
+              project: { select: { name: true, code: true } },
+              campus: { select: { name: true } },
+            },
+          },
+          decidedBy: { select: { firstName: true, lastName: true } },
+          evaluations: {
+            include: { evaluator: { select: { firstName: true, lastName: true } } },
+            orderBy: [{ section: 'asc' }, { updatedAt: 'desc' }],
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      },
       learnerProfiles: { select: { id: true, cohortId: true, statusCurrent: true, cohort: { select: { name: true } } } },
     },
   });

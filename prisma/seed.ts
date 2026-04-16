@@ -25,6 +25,10 @@ async function main() {
   await prisma.document.deleteMany();
   await prisma.learnerStatusHistory.deleteMany();
   await prisma.learnerProfile.deleteMany();
+  await prisma.sourcingSectionEvaluation.deleteMany();
+  await prisma.sourcingSessionJury.deleteMany();
+  await prisma.sourcingSessionCandidate.deleteMany();
+  await prisma.sourcingSession.deleteMany();
   await prisma.sourcingEvaluation.deleteMany();
   await prisma.candidate.deleteMany();
   await prisma.cohort.deleteMany();

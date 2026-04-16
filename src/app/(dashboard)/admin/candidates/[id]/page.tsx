@@ -17,6 +17,13 @@ import {
   resolveSourcingRecommendation,
   suggestSourcingRecommendation,
 } from '@/lib/candidate-sourcing';
+import {
+  SOURCING_SECTIONS as SESSION_SOURCING_SECTIONS,
+  computeFinalSourcingScore,
+  getCheckInMeta,
+  getSourcingDecisionMeta as getSessionDecisionMeta,
+  getSourcingSection,
+} from '@/lib/sourcing-session';
 
 // Profil candidat et sourcing
 const PIPELINE_STAGES = [
@@ -243,6 +250,9 @@ export default function CandidateDetailPage() {
           <button className={`tab ${activeTab === 'evaluation' ? 'active' : ''}`} onClick={() => setActiveTab('evaluation')}>
             Évaluations {candidate.evaluations?.length > 0 && <span className="badge badge-orange" style={{ marginLeft: 6, fontSize: 10 }}>{candidate.evaluations.length}</span>}
           </button>
+          <button className={`tab ${activeTab === 'sourcingSessions' ? 'active' : ''}`} onClick={() => setActiveTab('sourcingSessions')}>
+            Sessions sourcing {candidate.sourcingSessions?.length > 0 && <span className="badge badge-blue" style={{ marginLeft: 6, fontSize: 10 }}>{candidate.sourcingSessions.length}</span>}
+          </button>
         </div>
 
         {activeTab === 'profile' && editForm && (
@@ -456,6 +466,78 @@ export default function CandidateDetailPage() {
               })
             )}
       </>
+        )}
+        {activeTab === 'sourcingSessions' && (
+          <>
+            {candidate.sourcingSessions?.length === 0 ? (
+              <div className="empty-state">
+                <p>Ce candidat n'est affecté à aucune session de sourcing.</p>
+                <Link className="btn btn-primary" href="/admin/sourcing/sessions">Voir les sessions sourcing</Link>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: 12 }}>
+                {candidate.sourcingSessions?.map((row: any) => {
+                  const submitted = (row.evaluations || []).filter((ev: any) => ev.status === 'SUBMITTED');
+                  const finalScore = row.finalScore ?? computeFinalSourcingScore(submitted);
+                  const finalMeta = getSessionDecisionMeta(row.finalDecision);
+                  const checkMeta = getCheckInMeta(row.checkInStatus);
+                  return (
+                    <div key={row.id} className="card">
+                      <div className="card-header">
+                        <div>
+                          <h3 className="card-title">
+                            <Link href={`/admin/sourcing/sessions/${row.session.id}`}>{row.session.name}</Link>
+                          </h3>
+                          <p className="text-muted text-sm">
+                            {row.session.date ? new Date(row.session.date).toLocaleDateString('fr-FR') : 'Date non définie'}
+                            {row.session.project?.name ? ` - ${row.session.project.name}` : ''}
+                          </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                          <span className={`badge ${checkMeta.badgeClass}`}>{checkMeta.label}</span>
+                          <span className={`badge ${finalMeta.badgeClass}`}>{finalMeta.label}</span>
+                          <span className="badge badge-blue">{typeof finalScore === 'number' ? `${Math.round(finalScore)}/100` : 'Score en attente'}</span>
+                        </div>
+                      </div>
+                      <div className="card-body">
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+                          {SESSION_SOURCING_SECTIONS.map((section) => {
+                            const evaluation = row.evaluations?.find((ev: any) => ev.section === section.key);
+                            const rec = getSessionDecisionMeta(evaluation?.recommendation);
+                            return (
+                              <div key={section.key} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+                                  <strong>{getSourcingSection(section.key).shortLabel}</strong>
+                                  {evaluation ? <span className={`badge ${rec.badgeClass}`}>{rec.label}</span> : <span className="badge badge-gray">Non saisi</span>}
+                                </div>
+                                {evaluation ? (
+                                  <>
+                                    <div style={{ fontWeight: 800, marginBottom: 6 }}>{Math.round(evaluation.score || 0)}/100</div>
+                                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>
+                                      Jury : {evaluation.evaluator?.firstName} {evaluation.evaluator?.lastName}
+                                    </div>
+                                    {evaluation.comment && <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>{evaluation.comment}</p>}
+                                  </>
+                                ) : (
+                                  <p className="text-muted" style={{ margin: 0, fontSize: 12 }}>En attente du jury.</p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {row.finalComment && (
+                          <div style={{ marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+                            <strong>Commentaire décision finale</strong>
+                            <p style={{ margin: '6px 0 0', color: 'var(--text-secondary)' }}>{row.finalComment}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
       {showContactModal && (
         <div className="modal-overlay" onClick={() => setShowContactModal(false)}>

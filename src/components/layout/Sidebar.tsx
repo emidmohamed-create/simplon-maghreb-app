@@ -18,6 +18,7 @@ const adminNav = [
   ]},
   { section: 'Personnes', items: [
     { href: '/admin/candidates', label: 'Candidats', icon: '🎯' },
+    { href: '/admin/sourcing/sessions', label: 'Sessions sourcing', icon: 'S' },
     { href: '/admin/learners', label: 'Apprenants', icon: '🎓' },
     { href: '/admin/users', label: 'Utilisateurs', icon: '👤' },
   ]},
